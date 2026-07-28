@@ -8,6 +8,7 @@ import type {
   Conge,
   CongeFiltre,
   Contrat,
+  DecompteJours,
   DemandeCongeInput,
   Export,
   ExportFormat,
@@ -79,6 +80,7 @@ interface ModeleRow {
   unite: ModeleContrat['unite']
   base: number
   seuil_hebdo: number
+  decompte_jours: DecompteJours | null
   // Quotas de congés par type à solde (jours/type) donnés par ce modèle.
   quotas_par_type: Partial<Record<CongeType, number>> | null
 }
@@ -96,6 +98,7 @@ interface ContratRow {
   unite: Contrat['unite']
   base: number
   seuil_hebdo: number
+  decompte_jours: DecompteJours | null
   // Quotas de congés par type à solde (jours/type) propres au contrat.
   quotas_par_type: Partial<Record<CongeType, number>> | null
   date_debut: string | null
@@ -246,6 +249,7 @@ function modeleFromRow(r: ModeleRow): ModeleContrat {
     unite: r.unite,
     base: Number(r.base),
     seuilHebdo: Number(r.seuil_hebdo),
+    decompteJours: r.decompte_jours ?? 'ouvres',
     // MIGRATION douce : accepte un ancien enregistrement sans quotas (→ défauts).
     quotasParType: r.quotas_par_type ?? {},
   }
@@ -258,6 +262,7 @@ function modeleToRow(m: ModeleContrat): ModeleRow {
     unite: m.unite,
     base: m.base,
     seuil_hebdo: m.seuilHebdo,
+    decompte_jours: m.decompteJours ?? 'ouvres',
     quotas_par_type: quotasParTypeDe(m),
   }
 }
@@ -268,6 +273,7 @@ function contratFromRow(r: ContratRow): Contrat {
     unite: r.unite,
     base: Number(r.base),
     seuilHebdo: Number(r.seuil_hebdo),
+    decompteJours: r.decompte_jours ?? 'ouvres',
     // MIGRATION douce : accepte un ancien enregistrement sans quotas (→ défauts).
     quotasParType: r.quotas_par_type ?? {},
     dateDebut: r.date_debut ?? undefined,
@@ -280,6 +286,7 @@ function contratToRow(collaborateurId: string, c: Contrat): ContratRow {
     unite: c.unite,
     base: c.base,
     seuil_hebdo: c.seuilHebdo,
+    decompte_jours: c.decompteJours ?? 'ouvres',
     quotas_par_type: quotasParTypeDe(c),
     date_debut: c.dateDebut ?? null,
   }
@@ -1151,9 +1158,11 @@ export class SupabaseRepository implements Repository {
       throw new Error('La date de fin ne peut pas précéder la date de début.')
     }
     const demiJour = data.dateDebut === data.dateFin ? data.demiJour : 'aucune'
-    const nbJours = computeNbJours(data.dateDebut, data.dateFin, demiJour)
+    const mode = this.collaborateurs.find((c) => c.id === data.collaborateurId)
+      ?.contrat.decompteJours
+    const nbJours = computeNbJours(data.dateDebut, data.dateFin, demiJour, mode)
     if (nbJours <= 0) {
-      throw new Error('La période sélectionnée ne contient aucun jour ouvré (lun→ven).')
+      throw new Error('La période sélectionnée ne contient aucun jour décompté (week-end ou férié uniquement).')
     }
     const conge: Conge = {
       id: uuid(),

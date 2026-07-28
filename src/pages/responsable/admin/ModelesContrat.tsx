@@ -1,5 +1,11 @@
 import { useMemo, useState } from 'react'
-import type { CongeType, ModeleContrat, TypeContrat, UniteContrat } from '../../../types'
+import type {
+  CongeType,
+  DecompteJours,
+  ModeleContrat,
+  TypeContrat,
+  UniteContrat,
+} from '../../../types'
 import { useDataStore } from '../../../store/dataStore'
 import { typeASolde } from '../../../lib/conges'
 import DataTable from '../../../components/DataTable'
@@ -324,6 +330,19 @@ export default function ModelesContrat() {
                   setDraft({ ...draft, seuilHebdo: Number(e.target.value) })
                 }
               />
+            </div>
+            <div className="form-row">
+              <label htmlFor="decompte">Décompte des congés</label>
+              <select
+                id="decompte"
+                value={draft.decompteJours ?? 'ouvres'}
+                onChange={(e) =>
+                  setDraft({ ...draft, decompteJours: e.target.value as DecompteJours })
+                }
+              >
+                <option value="ouvres">Jours ouvrés (lun–ven)</option>
+                <option value="ouvrables">Jours ouvrables (lun–sam)</option>
+              </select>
             </div>
           </div>
 

@@ -621,10 +621,12 @@ export class LocalStorageRepository implements Repository {
     }
     const demiJour =
       data.dateDebut === data.dateFin ? data.demiJour : 'aucune'
-    const nbJours = computeNbJours(data.dateDebut, data.dateFin, demiJour)
+    const mode = this.getCollaborateurs().find((c) => c.id === data.collaborateurId)
+      ?.contrat.decompteJours
+    const nbJours = computeNbJours(data.dateDebut, data.dateFin, demiJour, mode)
     if (nbJours <= 0) {
       throw new Error(
-        'La période sélectionnée ne contient aucun jour ouvré (lun→ven).',
+        'La période sélectionnée ne contient aucun jour décompté (week-end ou férié uniquement).',
       )
     }
     const conge: Conge = {

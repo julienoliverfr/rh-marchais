@@ -63,7 +63,12 @@ export default function MesConges() {
 
   const memeJour = dateDebut === dateFin
   const demiEffective: DemiJour = memeJour ? demiJour : 'aucune'
-  const nbJours = computeNbJours(dateDebut, dateFin, demiEffective)
+  const nbJours = computeNbJours(
+    dateDebut,
+    dateFin,
+    demiEffective,
+    collaborateur.contrat.decompteJours,
+  )
   const datesInvalides = dateFin < dateDebut
 
   // Type d'absence sélectionné dans la liste paramétrable.

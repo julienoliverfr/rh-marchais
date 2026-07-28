@@ -8,6 +8,12 @@ export type ModeSaisie = 'journee_continue' | 'demi_journees'
 // Unité de décompte du contrat
 export type UniteContrat = 'heures' | 'jours'
 
+// Mode de décompte des CONGÉS : jours ouvrés (lun–ven) ou jours ouvrables
+// (lun–sam — le samedi est décompté même s'il n'est pas travaillé). Les jours
+// fériés chômés ne sont JAMAIS décomptés (dans les deux modes). Défini au niveau
+// du contrat (hérité du modèle). Absent sur les données historiques = 'ouvres'.
+export type DecompteJours = 'ouvres' | 'ouvrables'
+
 // Nature du contrat (modèle). Optionnel sur les données historiques.
 export type TypeContrat = 'CDI' | 'CDD' | 'saisonnier'
 
@@ -31,6 +37,8 @@ export interface ModeleContrat {
   unite: UniteContrat
   base: number // base contractuelle (ex: 35 heures, ou 7 heures/jour)
   seuilHebdo: number // seuil hebdomadaire (en heures) au-delà duquel = heures sup
+  // Mode de décompte des congés (défaut 'ouvres'). Hérité par le contrat.
+  decompteJours?: DecompteJours
   // Quotas de congés donnés par ce modèle, PAR TYPE à solde (jours/type). Une
   // entrée par type à acquisition forfait/mensuel (CP, RTT…). Un type ABSENT =
   // « quota par défaut de la politique » (repli). L'ancienneté n'y figure pas :
@@ -48,6 +56,8 @@ export interface Contrat {
   unite: UniteContrat
   base: number
   seuilHebdo: number // en heures
+  // Mode de décompte des congés (défaut 'ouvres'), pré-rempli depuis le modèle.
+  decompteJours?: DecompteJours
   // Quotas de congés PAR TYPE à solde de CE contrat (jours/type), pré-remplis
   // depuis le modèle et modifiables. Un type ABSENT = « quota par défaut de la
   // politique ». L'ancienneté n'y figure pas (calculée par paliers). C'est la

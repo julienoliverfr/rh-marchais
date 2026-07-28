@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { Collaborateur, CongeType } from '../../types'
+import type { Collaborateur, CongeType, DecompteJours } from '../../types'
 import { useDataStore } from '../../store/dataStore'
 import { quotasParTypeDe, typeASolde } from '../../lib/conges'
 import DataTable from '../../components/DataTable'
@@ -25,6 +25,8 @@ interface Draft {
   // contrat pré-rempli depuis le modèle, éditable
   base: number
   seuilHebdo: number
+  // Mode de décompte des congés (hérité du modèle, éditable).
+  decompteJours: DecompteJours
   // Quotas de congés PAR TYPE (jours/type). Un type absent = défaut politique.
   quotasParType: Partial<Record<CongeType, number>>
   // Liste des collaborateurs pour lesquels cette personne peut saisir.
@@ -86,6 +88,7 @@ export default function Collaborateurs() {
       modeleId: m?.id ?? '',
       base: m?.base ?? 35,
       seuilHebdo: m?.seuilHebdo ?? 35,
+      decompteJours: m?.decompteJours ?? 'ouvres',
       // Pré-rempli depuis le modèle (quotas par type).
       quotasParType: m ? { ...quotasParTypeDe(m) } : {},
       peutSaisirPour: [],
@@ -101,6 +104,7 @@ export default function Collaborateurs() {
       modeleId: c.contrat.modeleId,
       base: c.contrat.base,
       seuilHebdo: c.contrat.seuilHebdo,
+      decompteJours: c.contrat.decompteJours ?? 'ouvres',
       quotasParType: { ...quotasParTypeDe(c.contrat) },
       peutSaisirPour: c.peutSaisirPour ?? [],
     }
@@ -137,6 +141,7 @@ export default function Collaborateurs() {
       modeleId,
       base: m.base,
       seuilHebdo: m.seuilHebdo,
+      decompteJours: m.decompteJours ?? 'ouvres',
       quotasParType: { ...quotasParTypeDe(m) },
     })
   }
@@ -162,6 +167,7 @@ export default function Collaborateurs() {
         unite: m?.unite ?? 'heures',
         base: draft.base,
         seuilHebdo: draft.seuilHebdo,
+        decompteJours: draft.decompteJours,
         quotasParType: draft.quotasParType,
       },
       // Auto-référence exclue par sécurité (on saisit déjà pour soi).
@@ -391,6 +397,19 @@ export default function Collaborateurs() {
                   setDraft({ ...draft, seuilHebdo: Number(e.target.value) })
                 }
               />
+            </div>
+            <div className="form-row">
+              <label htmlFor="decompte">Décompte des congés</label>
+              <select
+                id="decompte"
+                value={draft.decompteJours}
+                onChange={(e) =>
+                  setDraft({ ...draft, decompteJours: e.target.value as DecompteJours })
+                }
+              >
+                <option value="ouvres">Jours ouvrés (lun–ven)</option>
+                <option value="ouvrables">Jours ouvrables (lun–sam)</option>
+              </select>
             </div>
           </div>
 
