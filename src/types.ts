@@ -14,6 +14,15 @@ export type UniteContrat = 'heures' | 'jours'
 // du contrat (hérité du modèle). Absent sur les données historiques = 'ouvres'.
 export type DecompteJours = 'ouvres' | 'ouvrables'
 
+// Jour férié PERSONNALISÉ (paramétré par l'admin), en surcouche des fériés
+// nationaux calculés automatiquement. Permet d'ajouter un « pont » chômé, ou au
+// contraire de marquer un férié national comme TRAVAILLÉ dans l'entreprise.
+export interface JourFerie {
+  date: string // ISO yyyy-mm-dd
+  label: string
+  chome: boolean // true = non décompté (pont/férié) ; false = travaillé (décompté)
+}
+
 // Nature du contrat (modèle). Optionnel sur les données historiques.
 export type TypeContrat = 'CDI' | 'CDD' | 'saisonnier'
 

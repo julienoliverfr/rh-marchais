@@ -184,6 +184,15 @@ create table if not exists public.types_absence (
   justificatif_requis boolean not null default false
 );
 
+-- --------------------------------------------------------------- jours_feries
+-- Jours fériés PERSONNALISÉS (ponts / overrides), en surcouche des fériés
+-- nationaux calculés côté client. `chome` = false => jour TRAVAILLÉ (décompté).
+create table if not exists public.jours_feries (
+  date date primary key,
+  label text not null,
+  chome boolean not null default true
+);
+
 -- ---------------------------------------------------------- politiques_conges
 -- Politique d'acquisition/report PAR type à solde (clé = type_id).
 create table if not exists public.politiques_conges (

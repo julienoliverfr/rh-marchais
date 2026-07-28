@@ -10,6 +10,7 @@ import type {
   Famille,
   ImportCollaborateurRow,
   ImportResult,
+  JourFerie,
   ModeleContrat,
   Perimetre,
   PolitiqueConges,
@@ -100,6 +101,12 @@ export interface Repository {
   getTypesAbsence(): TypeAbsence[]
   saveTypeAbsence(type: TypeAbsence): void
   deleteTypeAbsence(code: TypeAbsence['code']): void
+
+  // Jours fériés personnalisés (ponts / overrides). Surcouche des fériés
+  // nationaux calculés. Clé = date ISO. Deviendra une table `jours_feries`.
+  getJoursFeries(): JourFerie[]
+  saveJourFerie(jour: JourFerie): void
+  deleteJourFerie(date: string): void
 
   // Saisies d'heures
   getSaisies(): Saisie[]

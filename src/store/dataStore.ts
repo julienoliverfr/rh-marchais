@@ -10,6 +10,7 @@ import type {
   Famille,
   ImportCollaborateurRow,
   ImportResult,
+  JourFerie,
   ModeleContrat,
   Perimetre,
   PolitiqueConges,
@@ -22,6 +23,7 @@ import type {
   CongeType,
   TypeAbsence,
 } from '../types'
+import { setJoursFeriesCustom } from '../lib/feries'
 import { repository } from '../repositories'
 
 // Résultat d'une action pouvant échouer (transition de statut invalide, etc.).
@@ -47,6 +49,7 @@ interface DataState {
   politiques: PolitiquesConges
   regles: ReglesGenerales
   typesAbsence: TypeAbsence[]
+  joursFeries: JourFerie[]
   exports: Export[]
   // Compteur d'invalidation pour les soldes (l'acquis n'est pas dans le state).
   soldesTick: number
@@ -80,6 +83,9 @@ interface DataState {
   setRegles: (regles: ReglesGenerales) => void
   saveTypeAbsence: (type: TypeAbsence) => void
   deleteTypeAbsence: (code: TypeAbsence['code']) => void
+
+  saveJourFerie: (jour: JourFerie) => void
+  deleteJourFerie: (date: string) => void
 
   saveSaisie: (saisie: Saisie) => void
   deleteSaisie: (id: string) => void
@@ -138,6 +144,9 @@ export const useDataStore = create<DataState>((set, get) => {
     }
   }
 
+  // Surcouche fériés (ponts/overrides) disponible dès l'initialisation du store.
+  setJoursFeriesCustom(repository.getJoursFeries())
+
   return {
     familles: repository.getFamilles(),
     modeles: repository.getModeles(),
@@ -149,10 +158,12 @@ export const useDataStore = create<DataState>((set, get) => {
     politiques: repository.getPolitiques(),
     regles: repository.getRegles(),
     typesAbsence: repository.getTypesAbsence(),
+    joursFeries: repository.getJoursFeries(),
     exports: repository.listExports(),
     soldesTick: 0,
 
-    refresh: () =>
+    refresh: () => {
+      setJoursFeriesCustom(repository.getJoursFeries())
       set({
         familles: repository.getFamilles(),
         modeles: repository.getModeles(),
@@ -164,8 +175,10 @@ export const useDataStore = create<DataState>((set, get) => {
         politiques: repository.getPolitiques(),
         regles: repository.getRegles(),
         typesAbsence: repository.getTypesAbsence(),
+        joursFeries: repository.getJoursFeries(),
         exports: repository.listExports(),
-      }),
+      })
+    },
 
     saveFamille: (famille) => {
       repository.saveFamille(famille)
@@ -249,6 +262,18 @@ export const useDataStore = create<DataState>((set, get) => {
         politiques: repository.getPolitiques(),
         soldesTick: get().soldesTick + 1,
       })
+    },
+
+    saveJourFerie: (jour) => {
+      repository.saveJourFerie(jour)
+      setJoursFeriesCustom(repository.getJoursFeries())
+      set({ joursFeries: repository.getJoursFeries(), soldesTick: get().soldesTick + 1 })
+    },
+
+    deleteJourFerie: (date) => {
+      repository.deleteJourFerie(date)
+      setJoursFeriesCustom(repository.getJoursFeries())
+      set({ joursFeries: repository.getJoursFeries(), soldesTick: get().soldesTick + 1 })
     },
 
     saveSaisie: (saisie) => {

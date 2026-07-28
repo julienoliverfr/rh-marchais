@@ -12,6 +12,7 @@ import type {
   Famille,
   ImportCollaborateurRow,
   ImportResult,
+  JourFerie,
   ModeleContrat,
   Perimetre,
   PolitiqueConges,
@@ -73,6 +74,7 @@ const KEYS = {
   politiqueConges: 'rh.politiqueConges',
   regles: 'rh.regles',
   typesAbsence: 'rh.typesAbsence',
+  joursFeries: 'rh.joursFeries',
   exports: 'rh.exports',
   audit: 'rh.audit',
   seeded: 'rh.seeded',
@@ -424,6 +426,24 @@ export class LocalStorageRepository implements Repository {
     write(
       KEYS.typesAbsence,
       this.getTypesAbsence().filter((t) => t.code !== code),
+    )
+  }
+
+  // Jours fériés personnalisés (surcouche des fériés nationaux calculés).
+  getJoursFeries(): JourFerie[] {
+    return read<JourFerie[]>(KEYS.joursFeries, [])
+  }
+
+  saveJourFerie(jour: JourFerie): void {
+    const list = this.getJoursFeries().filter((j) => j.date !== jour.date)
+    list.push(jour)
+    write(KEYS.joursFeries, list)
+  }
+
+  deleteJourFerie(date: string): void {
+    write(
+      KEYS.joursFeries,
+      this.getJoursFeries().filter((j) => j.date !== date),
     )
   }
 

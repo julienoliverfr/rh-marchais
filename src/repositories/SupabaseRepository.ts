@@ -13,6 +13,7 @@ import type {
   Export,
   ExportFormat,
   Famille,
+  JourFerie,
   ImportCollaborateurRow,
   ImportResult,
   ModeleContrat,
@@ -45,6 +46,7 @@ import {
 } from '../lib/soldes'
 import { REGLES_DEFAUT, typesAbsenceSeed } from './seed'
 import { newId } from '../lib/id'
+import { setJoursFeriesCustom } from '../lib/feries'
 import type { Repository } from './Repository'
 
 // ---------------------------------------------------------------------------
@@ -161,6 +163,12 @@ interface TypeAbsenceRow {
   label: string
   a_solde: boolean
   justificatif_requis: boolean
+}
+
+interface JourFerieRow {
+  date: string
+  label: string
+  chome: boolean
 }
 
 interface PolitiqueRow {
@@ -513,6 +521,7 @@ export class SupabaseRepository implements Repository {
   private conges: Conge[] = []
   private soldes: SoldeConge[] = []
   private typesAbsence: TypeAbsence[] = []
+  private joursFeries: JourFerie[] = []
   private politiques: PolitiquesConges = {}
   private regles: ReglesGenerales = REGLES_DEFAUT
   private exports: Export[] = []
@@ -561,6 +570,7 @@ export class SupabaseRepository implements Repository {
       exportsRows,
       audit,
       profiles,
+      joursFeries,
     ] = await Promise.all([
       this.selectAll<FamilleRow>('familles'),
       this.selectAll<ModeleRow>('modeles_contrat'),
@@ -576,6 +586,7 @@ export class SupabaseRepository implements Repository {
       this.selectAll<ExportRow>('exports'),
       this.selectAll<AuditRow>('audit_log'),
       this.selectAll<ProfileRow>('profiles'),
+      this.selectAll<JourFerieRow>('jours_feries'),
     ])
 
     this.familles = familles.map(familleFromRow)
@@ -623,6 +634,13 @@ export class SupabaseRepository implements Repository {
     this.exports = exportsRows.map(exportFromRow)
     this.audit = audit.map(auditFromRow)
     this.profiles = profiles.map(profileToCompte)
+    this.joursFeries = joursFeries.map((r) => ({
+      date: r.date.slice(0, 10),
+      label: r.label,
+      chome: r.chome,
+    }))
+    // Synchronise la surcouche fériés utilisée par le calcul des congés.
+    setJoursFeriesCustom(this.joursFeries)
 
     this.ready = true
   }
@@ -1001,6 +1019,25 @@ export class SupabaseRepository implements Repository {
   deleteTypeAbsence(code: TypeAbsence['code']): void {
     this.typesAbsence = this.typesAbsence.filter((t) => t.code !== code)
     this.removeRow('types_absence', 'code', code, 'suppression type absence')
+  }
+
+  // -------------------------------- Jours fériés ----------------------------
+  getJoursFeries(): JourFerie[] {
+    return [...this.joursFeries]
+  }
+
+  saveJourFerie(jour: JourFerie): void {
+    const j: JourFerie = { ...jour, date: jour.date.slice(0, 10) }
+    this.joursFeries = [...this.joursFeries.filter((x) => x.date !== j.date), j]
+    setJoursFeriesCustom(this.joursFeries)
+    this.upsert('jours_feries', j, 'enregistrement jour férié', 'date')
+  }
+
+  deleteJourFerie(date: string): void {
+    const d = date.slice(0, 10)
+    this.joursFeries = this.joursFeries.filter((x) => x.date !== d)
+    setJoursFeriesCustom(this.joursFeries)
+    this.removeRow('jours_feries', 'date', d, 'suppression jour férié')
   }
 
   // -------------------------------- Saisies ---------------------------------

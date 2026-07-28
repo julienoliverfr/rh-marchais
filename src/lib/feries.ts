@@ -1,13 +1,27 @@
+import type { JourFerie } from '../types'
+
 // Jours fériés français (métropole) — calculés, y compris les fériés MOBILES
 // liés à Pâques (lundi de Pâques, Ascension, lundi de Pentecôte). Ils sont
 // traités comme CHÔMÉS : jamais décomptés d'un congé, quel que soit le mode de
-// décompte (jours ouvrés ou ouvrables). Un cache par année évite de recalculer.
+// décompte (jours ouvrés ou ouvrables).
+//
+// SURCOUCHE PERSONNALISÉE (Administration → Jours fériés) : une liste de dates
+// paramétrées prime sur le calcul. Chaque entrée porte `chome` :
+//   - true  → date non décomptée (pont, férié local, jour offert)
+//   - false → date décomptée même si c'est un férié national (jour travaillé)
 //
 // Note : l'Alsace-Moselle a 2 fériés supplémentaires (Vendredi saint, 26/12) —
-// hors périmètre (ETS Marchais est en Charente-Maritime). On pourra plus tard
-// ajouter des jours spécifiques (ponts, fériés locaux) via un paramétrage.
+// hors périmètre national ; ils s'ajoutent au besoin via la surcouche.
 
-const cacheParAnnee = new Map<number, Set<string>>()
+export interface FerieCalcule {
+  date: string // yyyy-mm-dd
+  label: string
+}
+
+const cacheListe = new Map<number, FerieCalcule[]>()
+const cacheSet = new Map<number, Set<string>>()
+// Surcouche : date -> chômé ? (renseignée par setJoursFeriesCustom).
+let custom = new Map<string, boolean>()
 
 const pad2 = (n: number): string => String(n).padStart(2, '0')
 
@@ -30,41 +44,62 @@ function paques(annee: number): { mois: number; jour: number } {
   return { mois, jour }
 }
 
-// yyyy-mm-dd d'une date construite en UTC (composants calendaires directs).
 function isoUTC(d: Date): string {
   return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
 }
 
-function feriesDeLAnnee(annee: number): Set<string> {
-  const existant = cacheParAnnee.get(annee)
+// Liste (triée) des fériés NATIONAUX calculés pour une année, avec libellés.
+export function feriesCalcules(annee: number): FerieCalcule[] {
+  const existant = cacheListe.get(annee)
   if (existant) return existant
 
-  const set = new Set<string>()
-  // Fériés à date fixe : Jour de l'An, Fête du Travail, Victoire 1945, Fête
-  // Nationale, Assomption, Toussaint, Armistice, Noël.
-  const fixes: ReadonlyArray<readonly [number, number]> = [
-    [1, 1], [5, 1], [5, 8], [7, 14], [8, 15], [11, 1], [11, 11], [12, 25],
+  const liste: FerieCalcule[] = [
+    { date: `${annee}-01-01`, label: "Jour de l'An" },
+    { date: `${annee}-05-01`, label: 'Fête du Travail' },
+    { date: `${annee}-05-08`, label: 'Victoire 1945' },
+    { date: `${annee}-07-14`, label: 'Fête Nationale' },
+    { date: `${annee}-08-15`, label: 'Assomption' },
+    { date: `${annee}-11-01`, label: 'Toussaint' },
+    { date: `${annee}-11-11`, label: 'Armistice 1918' },
+    { date: `${annee}-12-25`, label: 'Noël' },
   ]
-  for (const [mo, jo] of fixes) set.add(`${annee}-${pad2(mo)}-${pad2(jo)}`)
-
-  // Fériés mobiles, comptés à partir du dimanche de Pâques.
   const p = paques(annee)
   const base = new Date(Date.UTC(annee, p.mois - 1, p.jour))
-  for (const delta of [1, 39, 50]) {
-    // 1 = lundi de Pâques · 39 = Ascension (jeudi) · 50 = lundi de Pentecôte
+  const ajoute = (delta: number, label: string) => {
     const d = new Date(base)
     d.setUTCDate(d.getUTCDate() + delta)
-    set.add(isoUTC(d))
+    liste.push({ date: isoUTC(d), label })
   }
+  ajoute(1, 'Lundi de Pâques')
+  ajoute(39, 'Ascension')
+  ajoute(50, 'Lundi de Pentecôte')
 
-  cacheParAnnee.set(annee, set)
-  return set
+  liste.sort((a, b) => a.date.localeCompare(b.date))
+  cacheListe.set(annee, liste)
+  return liste
 }
 
-// La date ISO (yyyy-mm-dd) est-elle un jour férié français chômé ?
+function ferieSet(annee: number): Set<string> {
+  let s = cacheSet.get(annee)
+  if (!s) {
+    s = new Set(feriesCalcules(annee).map((f) => f.date))
+    cacheSet.set(annee, s)
+  }
+  return s
+}
+
+// Renseigne la surcouche personnalisée (appelée au chargement/màj de la config).
+export function setJoursFeriesCustom(entries: JourFerie[]): void {
+  custom = new Map(entries.map((e) => [e.date.slice(0, 10), e.chome]))
+}
+
+// La date ISO (yyyy-mm-dd) est-elle chômée (non décomptée) ?
+// La surcouche personnalisée PRIME sur le calcul national.
 export function estFerie(dateISO: string): boolean {
   const jour = dateISO.slice(0, 10)
+  const surcouche = custom.get(jour)
+  if (surcouche !== undefined) return surcouche
   const annee = Number(jour.slice(0, 4))
   if (!annee) return false
-  return feriesDeLAnnee(annee).has(jour)
+  return ferieSet(annee).has(jour)
 }

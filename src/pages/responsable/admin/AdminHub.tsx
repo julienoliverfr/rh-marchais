@@ -55,6 +55,12 @@ const GROUPES: GroupeAdmin[] = [
           'Libellés, décompte du solde CP et justificatif requis par type.',
         to: '/responsable/admin/absences',
       },
+      {
+        titre: 'Jours fériés',
+        description:
+          'Fériés nationaux automatiques + ponts chômés ou fériés travaillés.',
+        to: '/responsable/admin/feries',
+      },
     ],
   },
   {

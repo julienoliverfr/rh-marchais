@@ -84,6 +84,7 @@ alter table public.saisies           enable row level security;
 alter table public.conges            enable row level security;
 alter table public.soldes            enable row level security;
 alter table public.types_absence     enable row level security;
+alter table public.jours_feries      enable row level security;
 alter table public.politiques_conges enable row level security;
 alter table public.regles_generales  enable row level security;
 alter table public.exports           enable row level security;
@@ -134,6 +135,14 @@ create policy types_select on public.types_absence for select to authenticated
   using (true);
 drop policy if exists types_write on public.types_absence;
 create policy types_write on public.types_absence for all to authenticated
+  using (public.is_responsable()) with check (public.is_responsable());
+
+-- jours_feries (lecture par tous ; écriture responsable)
+drop policy if exists feries_select on public.jours_feries;
+create policy feries_select on public.jours_feries for select to authenticated
+  using (true);
+drop policy if exists feries_write on public.jours_feries;
+create policy feries_write on public.jours_feries for all to authenticated
   using (public.is_responsable()) with check (public.is_responsable());
 
 -- politiques_conges

@@ -22,6 +22,7 @@ import AdminHub from './pages/responsable/admin/AdminHub'
 import ModelesContrat from './pages/responsable/admin/ModelesContrat'
 import ReglesGenerales from './pages/responsable/admin/ReglesGenerales'
 import TypesAbsence from './pages/responsable/admin/TypesAbsence'
+import JoursFeries from './pages/responsable/admin/JoursFeries'
 import Utilisateurs from './pages/responsable/admin/Utilisateurs'
 import ImportCollaborateurs from './pages/responsable/admin/ImportCollaborateurs'
 
@@ -173,6 +174,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['responsable']}>
                 <TypesAbsence />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/responsable/admin/feries"
+            element={
+              <ProtectedRoute roles={['responsable']}>
+                <JoursFeries />
               </ProtectedRoute>
             }
           />
