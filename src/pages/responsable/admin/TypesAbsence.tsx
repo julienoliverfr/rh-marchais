@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { TypeAbsence } from '../../../types'
 import { useDataStore } from '../../../store/dataStore'
 import { typeASolde } from '../../../lib/conges'
+import { typesAbsenceSeed } from '../../../repositories/seed'
 import DataTable from '../../../components/DataTable'
 import type { ColumnDef } from '../../../components/DataTable'
 import Breadcrumb from '../../../components/Breadcrumb'
@@ -24,6 +25,19 @@ export default function TypesAbsence() {
 
   const [draft, setDraft] = useState<TypeAbsence | null>(null)
   const [labelError, setLabelError] = useState<string | null>(null)
+
+  // Types du domaine (fixés par les contraintes CHECK) PAS encore présents dans
+  // la liste : ce sont les seuls qu'on peut (ré)ajouter, avec la config du seed.
+  const codesAbsents = typesAbsenceSeed.filter(
+    (s) => !typesAbsence.some((t) => t.code === s.code),
+  )
+  const isCreate = draft != null && !typesAbsence.some((t) => t.code === draft.code)
+
+  function startCreate() {
+    if (codesAbsents.length === 0) return
+    setLabelError(null)
+    setDraft({ ...codesAbsents[0] })
+  }
 
   // Nombre de congés existants référençant ce type (garde anti-orphelin).
   function usedBy(code: TypeAbsence['code']): number {
@@ -129,9 +143,16 @@ export default function TypesAbsence() {
           { label: "Types d'absence" },
         ]}
       />
-      <h2 className="section-title" style={{ marginTop: 0 }}>
-        Types d'absence
-      </h2>
+      <div className="page-head">
+        <h2 className="section-title" style={{ margin: 0 }}>
+          Types d'absence
+        </h2>
+        {!draft && codesAbsents.length > 0 && (
+          <button className="btn ocre small" onClick={startCreate}>
+            + Ajouter un type
+          </button>
+        )}
+      </div>
       <p className="muted">
         Ces types alimentent le menu déroulant de la demande de congé. Un type
         « à solde » porte son propre compteur (acquis / pris / restant) ; ses
@@ -141,8 +162,27 @@ export default function TypesAbsence() {
       {draft && (
         <form className="card" onSubmit={handleSave} style={{ marginTop: '1rem' }}>
           <h3 className="section-title" style={{ marginTop: 0 }}>
-            Éditer un type d'absence
+            {isCreate ? 'Ajouter' : 'Éditer'} un type d'absence
           </h3>
+          {isCreate && (
+            <div className="form-row">
+              <label htmlFor="code">Type (du domaine)</label>
+              <select
+                id="code"
+                value={draft.code}
+                onChange={(e) => {
+                  const seed = typesAbsenceSeed.find((s) => s.code === e.target.value)
+                  if (seed) setDraft({ ...seed })
+                }}
+              >
+                {codesAbsents.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.label} ({s.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="form-row">
             <label htmlFor="label">
               Libellé (<code>{draft.code}</code>)
