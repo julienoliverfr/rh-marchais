@@ -7,6 +7,7 @@ import type {
   PolitiqueConges,
   SoldePeriode,
 } from '../types'
+import { computeNbJours } from './conges'
 
 // ---------------------------------------------------------------------------
 // Moteur d'acquisition et de report des congés à solde (inspiré d'Odoo Time Off).
@@ -232,12 +233,32 @@ function acquisPeriode(
   return arrondi(tauxMensuel * moisTravailles)
 }
 
-// Somme des congés VALIDÉS (déjà filtrés sur le type par l'appelant) dont la
-// date de début tombe dans la période.
-function prisSurPeriode(congesValidesDuType: Conge[], periode: PeriodeConges): number {
-  return congesValidesDuType
-    .filter((c) => c.dateDebut >= periode.debut && c.dateDebut <= periode.fin)
-    .reduce((acc, c) => acc + c.nbJours, 0)
+// Part d'un congé qui tombe DANS la période de référence.
+//
+// Un congé à cheval sur deux périodes (ex. 25/05 → 05/06) ne doit pas être
+// imputé à 100 % sur la période de sa date de début : on ventile au prorata des
+// jours décomptables de chaque côté de la frontière.
+//
+// `c.nbJours` reste la référence (il peut avoir été AJUSTÉ manuellement par le
+// responsable) : on ne le recalcule jamais, on le répartit.
+function partSurPeriode(
+  c: Conge,
+  contrat: Contrat,
+  periode: PeriodeConges,
+): number {
+  // Entièrement hors période.
+  if (c.dateFin < periode.debut || c.dateDebut > periode.fin) return 0
+  // Entièrement dedans : valeur telle quelle (cas courant).
+  if (c.dateDebut >= periode.debut && c.dateFin <= periode.fin) return c.nbJours
+
+  // À cheval : prorata des jours décomptables situés dans la période.
+  const mode = contrat.decompteJours
+  const total = computeNbJours(c.dateDebut, c.dateFin, 'aucune', mode)
+  if (total <= 0) return 0
+  const debut = c.dateDebut > periode.debut ? c.dateDebut : periode.debut
+  const fin = c.dateFin < periode.fin ? c.dateFin : periode.fin
+  const dedans = computeNbJours(debut, fin, 'aucune', mode)
+  return arrondi((c.nbJours * dedans) / total)
 }
 
 // Calcule le solde d'une période de référence pour un collaborateur, POUR UN
@@ -288,22 +309,34 @@ export function calculerSolde(
   }
   reportBrut = arrondi(reportBrut)
 
-  const pris = prisSurPeriode(congesValidesDuType, periode)
-
-  // --- Ordre de consommation : le report D'ABORD, puis l'acquisition ---
-  // Le report consommé compte comme "pris" (une expiration ne le retire jamais).
-  const prisSurReport = Math.min(pris, reportBrut)
-  const reportRestantAvantExp = arrondi(reportBrut - prisSurReport)
-
-  // --- Fenêtre d'expiration du report ---
-  // Le report N'EST disponible que si dateRef < débutPériode + reportExpirationMois.
-  // Au-delà, la part de report NON encore consommée tombe à 0.
+  // --- Fenêtre d'expiration du report (calculée AVANT l'imputation) ---------
+  // Le report n'est disponible que jusqu'à débutPériode + reportExpirationMois.
   let dateExpirationReport: string | undefined
-  let reportDansFenetre = true
   if (reportBrut > 0) {
     dateExpirationReport = addMonthsISO(periode.debut, politique.reportExpirationMois)
-    reportDansFenetre = dateRef < dateExpirationReport
   }
+
+  // Part de chaque congé revenant à CETTE période (gère les congés à cheval).
+  const parts = congesValidesDuType
+    .map((c) => ({ conge: c, jours: partSurPeriode(c, contrat, periode) }))
+    .filter((p) => p.jours > 0)
+  const pris = arrondi(parts.reduce((acc, p) => acc + p.jours, 0))
+
+  // --- Ordre de consommation : le report D'ABORD, puis l'acquisition --------
+  // MAIS seuls les congés PRIS AVANT l'expiration peuvent consommer le report.
+  // Sinon un congé posé après l'expiration s'imputait sur un report déjà perdu
+  // et ne décomptait plus RIEN (jours offerts silencieusement).
+  const prisEligibleReport = dateExpirationReport
+    ? arrondi(
+        parts
+          .filter((p) => p.conge.dateDebut < (dateExpirationReport as string))
+          .reduce((acc, p) => acc + p.jours, 0),
+      )
+    : pris
+  const prisSurReport = Math.min(prisEligibleReport, reportBrut)
+  const reportRestantAvantExp = arrondi(reportBrut - prisSurReport)
+
+  const reportDansFenetre = dateExpirationReport ? dateRef < dateExpirationReport : true
   const reportRestant = reportDansFenetre ? reportRestantAvantExp : 0
 
   const prisSurAcquis = arrondi(pris - prisSurReport)

@@ -858,6 +858,9 @@ export class SupabaseRepository implements Repository {
           unite: modele?.unite ?? 'heures',
           base: modele?.base ?? 35,
           seuilHebdo: modele?.seuilHebdo ?? seuilDefaut,
+          // Mode de décompte des congés HÉRITÉ du modèle (sinon retour à
+          // « ouvrés » → 1 jour sous-décompté par semaine de congé).
+          decompteJours: modele?.decompteJours ?? 'ouvres',
           // Quotas de congés PAR TYPE hérités du modèle (repli défaut politique).
           quotasParType: modele ? quotasParTypeDe(modele) : {},
           dateDebut: row.dateDebut,
