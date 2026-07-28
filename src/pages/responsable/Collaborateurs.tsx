@@ -27,6 +27,9 @@ interface Draft {
   seuilHebdo: number
   // Mode de décompte des congés (hérité du modèle, éditable).
   decompteJours: DecompteJours
+  // Date d'entrée (ISO yyyy-mm-dd), '' si inconnue. Pilote le PRORATA d'acquisition
+  // des congés et le calcul de l'ancienneté (voir lib/soldes.ts).
+  dateDebut: string
   // Quotas de congés PAR TYPE (jours/type). Un type absent = défaut politique.
   quotasParType: Partial<Record<CongeType, number>>
   // Liste des collaborateurs pour lesquels cette personne peut saisir.
@@ -89,6 +92,7 @@ export default function Collaborateurs() {
       base: m?.base ?? 35,
       seuilHebdo: m?.seuilHebdo ?? 35,
       decompteJours: m?.decompteJours ?? 'ouvres',
+      dateDebut: '',
       // Pré-rempli depuis le modèle (quotas par type).
       quotasParType: m ? { ...quotasParTypeDe(m) } : {},
       peutSaisirPour: [],
@@ -105,6 +109,9 @@ export default function Collaborateurs() {
       base: c.contrat.base,
       seuilHebdo: c.contrat.seuilHebdo,
       decompteJours: c.contrat.decompteJours ?? 'ouvres',
+      // Relue puis réécrite telle quelle : sans cela, une simple édition
+      // EFFACERAIT la date d'entrée (et donc le prorata + l'ancienneté).
+      dateDebut: c.contrat.dateDebut ?? '',
       quotasParType: { ...quotasParTypeDe(c.contrat) },
       peutSaisirPour: c.peutSaisirPour ?? [],
     }
@@ -168,6 +175,7 @@ export default function Collaborateurs() {
         base: draft.base,
         seuilHebdo: draft.seuilHebdo,
         decompteJours: draft.decompteJours,
+        dateDebut: draft.dateDebut || undefined,
         quotasParType: draft.quotasParType,
       },
       // Auto-référence exclue par sécurité (on saisit déjà pour soi).
@@ -411,7 +419,31 @@ export default function Collaborateurs() {
                 <option value="ouvrables">Jours ouvrables (lun–sam)</option>
               </select>
             </div>
+            <div className="form-row">
+              <label htmlFor="dateDebut">Date d'entrée</label>
+              <input
+                id="dateDebut"
+                type="date"
+                value={draft.dateDebut}
+                onChange={(e) => setDraft({ ...draft, dateDebut: e.target.value })}
+              />
+            </div>
           </div>
+          <p className="muted" style={{ fontSize: '0.8rem', marginTop: '-0.25rem' }}>
+            {draft.dateDebut ? (
+              <>
+                Les congés seront calculés <strong>au prorata</strong> à partir de cette
+                date, et l'ancienneté en découle.
+              </>
+            ) : (
+              <>
+                Sans date d'entrée, le collaborateur reçoit le{' '}
+                <strong>quota annuel complet</strong> (aucun prorata) et{' '}
+                <strong>aucun congé d'ancienneté</strong>. Renseignez-la pour une
+                embauche en cours d'année.
+              </>
+            )}
+          </p>
 
           <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>
             Congés (jours par type). Laisser vide = quota par défaut de la
