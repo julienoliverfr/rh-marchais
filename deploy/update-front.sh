@@ -6,7 +6,10 @@ set -e
 export PATH=/usr/local/bin:/usr/bin:/bin
 
 cd /opt/rh-marchais
-git pull -q origin main
+# reset --hard (et non `git pull`) : robuste même si un artefact de build a
+# « sali » l'arbre (sinon `pull` refuse de fusionner et l'update échoue).
+git fetch -q origin main
+git reset --hard -q origin/main
 
 ANON=$(grep '^ANON_KEY=' /opt/supabase/.env | cut -d= -f2-)
 IP=$(curl -fsS https://api.ipify.org)
