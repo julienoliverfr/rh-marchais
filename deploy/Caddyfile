@@ -1,0 +1,8 @@
+# Sert l'application (fichiers statiques) sur le port 80, avec repli SPA
+# (toute URL inconnue renvoie index.html pour que le routage React fonctionne).
+:80 {
+	root * /srv
+	encode gzip
+	try_files {path} /index.html
+	file_server
+}

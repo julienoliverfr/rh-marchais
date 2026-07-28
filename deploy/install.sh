@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+#
+# RH Marchais — installation tout-en-un (test) sur un serveur Ubuntu 24.04 vierge.
+# Installe : base de données + authentification + sécurité (Supabase auto-hébergé),
+# puis l'application, servie sur le port 80.
+#
+# À lancer EN ROOT sur un serveur NEUF Hetzner Cloud (Ubuntu 24.04).
+# Données 100 % fictives — destiné au TEST.
+#
+set -euo pipefail
+
+REPO="https://github.com/julienoliverfr/rh-marchais.git"
+APP_DIR="/opt/rh-marchais"
+SUPA_DIR="/opt/supabase"
+DEMO_PASSWORD="demo1234"   # mot de passe des 3 comptes de démonstration
+
+log(){ echo -e "\n\033[1;34m==> $*\033[0m"; }
+
+log "[1/9] Adresse IP publique du serveur"
+PUBLIC_IP="$(curl -fsS https://api.ipify.org || hostname -I | awk '{print $1}')"
+echo "IP détectée : $PUBLIC_IP"
+
+log "[2/9] Installation des outils (Docker, Git, Node, openssl)"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y curl git ca-certificates openssl jq
+if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sh; fi
+if ! command -v node   >/dev/null 2>&1; then curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs; fi
+
+log "[3/9] Téléchargement de Supabase (Docker) et de l'application"
+rm -rf /tmp/supabase-src
+git clone --depth 1 https://github.com/supabase/supabase /tmp/supabase-src
+mkdir -p "$SUPA_DIR"
+cp -rf /tmp/supabase-src/docker/. "$SUPA_DIR"/
+cp -f "$SUPA_DIR/.env.example" "$SUPA_DIR/.env"
+rm -rf "$APP_DIR"
+CLONE_URL="$REPO"
+if [ -n "${GH_TOKEN:-}" ]; then
+  CLONE_URL="https://${GH_TOKEN}@github.com/julienoliverfr/rh-marchais.git"
+fi
+git clone --depth 1 "$CLONE_URL" "$APP_DIR"
+
+log "[4/9] Génération des secrets (mots de passe et clés)"
+POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+JWT_SECRET="$(openssl rand -hex 40)"
+DASHBOARD_PASSWORD="$(openssl rand -hex 12)"
+# Clés API anon + service_role : des jetons JWT signés avec JWT_SECRET.
+readarray -t KEYS < <(node -e '
+const c=require("crypto"), s=process.argv[1];
+const u=x=>Buffer.from(x).toString("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+const jwt=r=>{const n=Math.floor(Date.now()/1000);const d=u(JSON.stringify({alg:"HS256",typ:"JWT"}))+"."+u(JSON.stringify({role:r,iss:"supabase",iat:n,exp:n+3600*24*3650}));return d+"."+c.createHmac("sha256",s).update(d).digest("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");};
+console.log(jwt("anon")); console.log(jwt("service_role"));
+' "$JWT_SECRET")
+ANON_KEY="${KEYS[0]}"; SERVICE_ROLE_KEY="${KEYS[1]}"
+
+log "[5/9] Configuration de Supabase (.env)"
+API_URL="http://$PUBLIC_IP:8000"
+setenv(){ # setenv CLE VALEUR  -> remplace ou ajoute la ligne dans $SUPA_DIR/.env
+  local k="$1" v="$2"
+  if grep -q "^$k=" "$SUPA_DIR/.env"; then
+    # échappe les caractères spéciaux pour sed
+    local ev; ev="$(printf '%s' "$v" | sed -e 's/[\/&|]/\\&/g')"
+    sed -i "s|^$k=.*|$k=$ev|" "$SUPA_DIR/.env"
+  else
+    echo "$k=$v" >> "$SUPA_DIR/.env"
+  fi
+}
+setenv POSTGRES_PASSWORD   "$POSTGRES_PASSWORD"
+setenv JWT_SECRET          "$JWT_SECRET"
+setenv ANON_KEY            "$ANON_KEY"
+setenv SERVICE_ROLE_KEY    "$SERVICE_ROLE_KEY"
+setenv DASHBOARD_USERNAME  "admin"
+setenv DASHBOARD_PASSWORD  "$DASHBOARD_PASSWORD"
+setenv SITE_URL            "http://$PUBLIC_IP"
+setenv API_EXTERNAL_URL    "$API_URL"
+setenv SUPABASE_PUBLIC_URL "$API_URL"
+
+log "[6/9] Démarrage de la base de données et de l'authentification"
+cd "$SUPA_DIR"
+docker compose pull
+docker compose up -d
+echo "Attente du démarrage de la base (30 s)…"; sleep 30
+# Attend que Postgres réponde (jusqu'à ~2 min)
+for i in $(seq 1 24); do
+  if docker compose exec -T db pg_isready -U postgres >/dev/null 2>&1; then break; fi
+  echo "  …base pas encore prête ($i)"; sleep 5
+done
+
+log "[7/9] Création du schéma, des règles de sécurité, puis des comptes de démo"
+docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/schema.sql"
+docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/rls.sql"
+# Comptes d'authentification (fictifs)
+for pair in "jean@demo.local" "amelie@demo.local" "sophie@demo.local"; do
+  echo "  - création de $pair"
+  curl -fsS -X POST "$API_URL/auth/v1/admin/users" \
+    -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"$pair\",\"password\":\"$DEMO_PASSWORD\",\"email_confirm\":true}" >/dev/null \
+    && echo "    ok" || echo "    (déjà existant ou à vérifier)"
+done
+# Données fictives + liaison des profils aux comptes (par e-mail)
+docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/seed.sql"
+
+log "[8/9] Construction de l'application"
+cd "$APP_DIR"
+npm ci
+VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
+
+log "[9/9] Mise en ligne de l'application (port 80)"
+docker rm -f rh-front >/dev/null 2>&1 || true
+docker run -d --restart always --name rh-front \
+  -p 80:80 \
+  -v "$APP_DIR/dist":/srv \
+  -v "$APP_DIR/deploy/Caddyfile":/etc/caddy/Caddyfile \
+  caddy:2 >/dev/null
+
+# Récapitulatif
+cat <<EOF
+
+============================================================
+  ✅ INSTALLATION TERMINÉE
+============================================================
+  Application    : http://$PUBLIC_IP
+  Comptes de démo (mot de passe : $DEMO_PASSWORD)
+     - employé     : jean
+     - employé     : amelie
+     - responsable : sophie
+
+  (Base/API interne : $API_URL — inutile au quotidien)
+
+  ⚠️ Vérifie que les ports 80 et 8000 sont ouverts
+     (Firewall Hetzner Cloud, si tu en as attaché un).
+
+  Secrets sauvegardés dans : $SUPA_DIR/.env
+============================================================
+EOF
