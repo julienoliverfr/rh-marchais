@@ -57,27 +57,36 @@ begin
       using errcode = '23505';
   end if;
 
-  -- 1) Utilisateur d'authentification (colonnes obligatoires GoTrue récent ;
-  --    les colonnes nullables / à défaut sont laissées telles quelles).
+  -- 1) Utilisateur d'authentification.
+  --    IMPORTANT : GoTrue lit certains champs texte comme des chaînes Go et
+  --    échoue à la connexion s'ils sont NULL (« converting NULL to string »).
+  --    On les initialise donc explicitement à '' (chaîne vide).
   insert into auth.users (
     instance_id, id, aud, role, email,
     encrypted_password, email_confirmed_at,
     created_at, updated_at,
-    raw_app_meta_data, raw_user_meta_data
+    raw_app_meta_data, raw_user_meta_data,
+    confirmation_token, recovery_token,
+    email_change, email_change_token_new, email_change_token_current,
+    phone_change, phone_change_token, reauthentication_token
   ) values (
     '00000000-0000-0000-0000-000000000000', v_uid, 'authenticated', 'authenticated', v_email,
     crypt(p_mot_de_passe, gen_salt('bf')), now(),
     now(), now(),
-    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb
+    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+    '', '',
+    '', '', '',
+    '', '', ''
   );
 
-  -- 2) Identité e-mail liée (la colonne `email` d'auth.identities est générée
-  --    depuis identity_data dans les versions récentes : on ne l'insère pas).
+  -- 2) Identité e-mail liée. `provider_id` = l'UID (comme le fait l'API admin
+  --    GoTrue), pas l'e-mail ; la colonne `email` d'auth.identities est générée
+  --    depuis identity_data dans les versions récentes : on ne l'insère pas.
   insert into auth.identities (
     id, user_id, provider, provider_id, identity_data,
     last_sign_in_at, created_at, updated_at
   ) values (
-    gen_random_uuid(), v_uid, 'email', v_email,
+    gen_random_uuid(), v_uid, 'email', v_uid::text,
     jsonb_build_object('sub', v_uid::text, 'email', v_email),
     now(), now(), now()
   );
