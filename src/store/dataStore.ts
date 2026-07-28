@@ -79,6 +79,7 @@ interface DataState {
   // Règles générales + types d'absence (Administration)
   setRegles: (regles: ReglesGenerales) => void
   saveTypeAbsence: (type: TypeAbsence) => void
+  deleteTypeAbsence: (code: TypeAbsence['code']) => void
 
   saveSaisie: (saisie: Saisie) => void
   deleteSaisie: (id: string) => void
@@ -234,6 +235,15 @@ export const useDataStore = create<DataState>((set, get) => {
     saveTypeAbsence: (type) => {
       repository.saveTypeAbsence(type)
       // `aSolde` peut changer la liste des types portant une politique/solde.
+      set({
+        typesAbsence: repository.getTypesAbsence(),
+        politiques: repository.getPolitiques(),
+        soldesTick: get().soldesTick + 1,
+      })
+    },
+
+    deleteTypeAbsence: (code) => {
+      repository.deleteTypeAbsence(code)
       set({
         typesAbsence: repository.getTypesAbsence(),
         politiques: repository.getPolitiques(),

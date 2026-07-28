@@ -7,6 +7,7 @@ import type { ColumnDef } from '../../../components/DataTable'
 import Breadcrumb from '../../../components/Breadcrumb'
 import FieldError from '../../../components/FieldError'
 import { useToast } from '../../../components/Toast'
+import { useConfirm } from '../../../components/ConfirmDialog'
 
 // Types d'absence paramétrables (config `rh.typesAbsence`). Le `code` reste un
 // CongeType du domaine (le moteur de solde en dépend), il n'est donc pas
@@ -15,11 +16,31 @@ import { useToast } from '../../../components/Toast'
 // « Politique de congés ». Le menu déroulant de la demande de congé lit cette liste.
 export default function TypesAbsence() {
   const typesAbsence = useDataStore((s) => s.typesAbsence)
+  const conges = useDataStore((s) => s.conges)
   const saveTypeAbsence = useDataStore((s) => s.saveTypeAbsence)
+  const deleteTypeAbsence = useDataStore((s) => s.deleteTypeAbsence)
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [draft, setDraft] = useState<TypeAbsence | null>(null)
   const [labelError, setLabelError] = useState<string | null>(null)
+
+  // Nombre de congés existants référençant ce type (garde anti-orphelin).
+  function usedBy(code: TypeAbsence['code']): number {
+    return conges.filter((c) => c.type === code).length
+  }
+
+  async function handleDelete(t: TypeAbsence) {
+    const ok = await confirm({
+      title: "Supprimer le type d'absence",
+      message: `Voulez-vous supprimer le type « ${t.label} » ? Il n'apparaîtra plus dans les demandes de congé. Cette action est définitive.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    })
+    if (!ok) return
+    deleteTypeAbsence(t.code)
+    toast.success("Type d'absence supprimé.")
+  }
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -79,9 +100,23 @@ export default function TypesAbsence() {
       key: 'actions',
       label: '',
       render: (t) => (
-        <button className="btn secondary small" onClick={() => setDraft({ ...t })}>
-          Éditer
-        </button>
+        <div className="btn-row">
+          <button className="btn secondary small" onClick={() => setDraft({ ...t })}>
+            Éditer
+          </button>
+          <button
+            className="btn danger small"
+            disabled={usedBy(t.code) > 0}
+            title={
+              usedBy(t.code) > 0
+                ? 'Type utilisé par des congés existants'
+                : 'Supprimer'
+            }
+            onClick={() => handleDelete(t)}
+          >
+            Suppr.
+          </button>
+        </div>
       ),
     },
   ]

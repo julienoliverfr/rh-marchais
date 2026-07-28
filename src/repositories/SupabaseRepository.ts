@@ -973,6 +973,11 @@ export class SupabaseRepository implements Repository {
     this.upsert('types_absence', typeAbsenceToRow(type) as unknown as Record<string, unknown>, 'enregistrement type absence', 'code')
   }
 
+  deleteTypeAbsence(code: TypeAbsence['code']): void {
+    this.typesAbsence = this.typesAbsence.filter((t) => t.code !== code)
+    this.removeRow('types_absence', 'code', code, 'suppression type absence')
+  }
+
   // -------------------------------- Saisies ---------------------------------
   getSaisies(): Saisie[] {
     return [...this.saisies]

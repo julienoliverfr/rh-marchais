@@ -420,6 +420,13 @@ export class LocalStorageRepository implements Repository {
     write(KEYS.typesAbsence, list)
   }
 
+  deleteTypeAbsence(code: TypeAbsence['code']): void {
+    write(
+      KEYS.typesAbsence,
+      this.getTypesAbsence().filter((t) => t.code !== code),
+    )
+  }
+
   // Saisies
   getSaisies(): Saisie[] {
     return read<Saisie[]>(KEYS.saisies, [])

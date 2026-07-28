@@ -99,6 +99,7 @@ export interface Repository {
   // (le moteur de solde en dépend) ; l'admin en règle libellé + options.
   getTypesAbsence(): TypeAbsence[]
   saveTypeAbsence(type: TypeAbsence): void
+  deleteTypeAbsence(code: TypeAbsence['code']): void
 
   // Saisies d'heures
   getSaisies(): Saisie[]
