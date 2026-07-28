@@ -639,11 +639,19 @@ export class SupabaseRepository implements Repository {
     op: PromiseLike<{ error: PostgrestError | null }>,
     contexte: string,
   ): void {
-    op.then(({ error }) => {
-      if (error) this.report(contexte, error)
-    })
-    // Les rejets réseau imprévus sont aussi capturés.
-    Promise.resolve(op).catch((e: unknown) => this.report(contexte, e))
+    // IMPORTANT : un builder supabase-js est un « thenable » qui DÉCLENCHE la
+    // requête HTTP à CHAQUE appel de `.then()`. Il ne faut donc l'exécuter
+    // qu'UNE seule fois : `Promise.resolve(op)` adopte le thenable (1 exécution),
+    // puis on gère succès-avec-erreur ET rejet réseau sur la promesse résultante.
+    // (Auparavant `op.then(...)` PUIS `Promise.resolve(op).catch(...)` lançaient
+    // la requête DEUX fois → doublons : ex. violation de clé primaire sur un
+    // INSERT append-only comme audit_log.)
+    Promise.resolve(op).then(
+      (res) => {
+        if (res?.error) this.report(contexte, res.error)
+      },
+      (e: unknown) => this.report(contexte, e),
+    )
   }
 
   private report(contexte: string, error: unknown): void {
