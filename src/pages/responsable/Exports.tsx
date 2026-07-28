@@ -55,7 +55,7 @@ export default function Exports() {
 
   // Libellé lisible du périmètre (pour messages + nom de fichier).
   const perimetreLabel = useMemo(() => {
-    if (perimetre === PERIMETRE_TOUTES) return 'Toutes familles'
+    if (perimetre === PERIMETRE_TOUTES) return 'Toutes équipes'
     return familles.find((f) => f.id === perimetre)?.nom ?? perimetre
   }, [perimetre, familles])
 
@@ -139,7 +139,7 @@ export default function Exports() {
       },
       {
         key: 'famille',
-        label: 'Famille',
+        label: 'Équipe',
         sortable: true,
         sortAccessor: (l) => l.famille,
         render: (l) => (
@@ -187,7 +187,7 @@ export default function Exports() {
   const apercuFilters: FacetDef<RecapLigne>[] = [
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       type: 'select',
       options: familles.map((f) => ({ value: f.nom, label: f.nom })),
       accessor: (l) => l.famille,
@@ -219,7 +219,7 @@ export default function Exports() {
               value={perimetre}
               onChange={(e) => setPerimetre(e.target.value)}
             >
-              <option value={PERIMETRE_TOUTES}>Toutes familles</option>
+              <option value={PERIMETRE_TOUTES}>Toutes équipes</option>
               {familles.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.nom}
@@ -372,7 +372,7 @@ export default function Exports() {
               {exports.map((e) => {
                 const perimNom =
                   e.perimetre === PERIMETRE_TOUTES
-                    ? 'Toutes familles'
+                    ? 'Toutes équipes'
                     : familles.find((f) => f.id === e.perimetre)?.nom ??
                       e.perimetre
                 return (

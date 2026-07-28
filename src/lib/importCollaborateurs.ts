@@ -16,10 +16,10 @@ const MAX_IMPORT_BYTES = 5 * 1024 * 1024
 // modèle standard, et génération du fichier modèle (CSV + Excel).
 //
 // Le modèle STANDARD attend l'en-tête suivant (dans cet ordre) :
-//   Nom · Prénom · Identifiant · Famille · Modèle de contrat · Date d'entrée ·
+//   Nom · Prénom · Identifiant · Équipe · Modèle de contrat · Date d'entrée ·
 //   [Solde initial — <type à solde> …] · Mot de passe
 //
-// Requis     : Nom, Prénom, Identifiant, Famille, Modèle de contrat.
+// Requis     : Nom, Prénom, Identifiant, Équipe, Modèle de contrat.
 // Optionnels : Date d'entrée (AAAA-MM-JJ ou JJ/MM/AAAA), une colonne « Solde
 //              initial — <libellé> » par type à solde (nombre, virgule FR),
 //              Mot de passe (défaut « changeme » si vide).
@@ -46,7 +46,7 @@ const HEADERS_AVANT_SOLDES = [
   'Nom',
   'Prénom',
   'Identifiant',
-  'Famille',
+  'Équipe',
   'Modèle de contrat',
   "Date d'entrée",
 ] as const
@@ -62,7 +62,7 @@ const HEADERS_REQUIS = [
   'Nom',
   'Prénom',
   'Identifiant',
-  'Famille',
+  'Équipe',
   'Modèle de contrat',
 ] as const
 
@@ -266,9 +266,20 @@ function matrixToRows(
 
   const headerNorm = nonEmpty[0].map((c) => norm(String(c)))
   const colOf = (h: string): number => headerNorm.indexOf(norm(h))
+  // Cherche la 1re colonne présente parmi plusieurs libellés acceptés
+  // (compat ascendante : « Équipe » ou l'ancien « Famille »).
+  const colOfAny = (...hs: string[]): number => {
+    for (const h of hs) {
+      const i = colOf(h)
+      if (i >= 0) return i
+    }
+    return -1
+  }
 
   // Colonnes requises manquantes → message clair, import bloqué.
-  const missing = HEADERS_REQUIS.filter((h) => colOf(h) < 0)
+  const missing = HEADERS_REQUIS.filter((h) =>
+    h === 'Équipe' ? colOfAny('Équipe', 'Famille') < 0 : colOf(h) < 0,
+  )
   if (missing.length > 0) {
     return {
       ok: false,
@@ -279,7 +290,7 @@ function matrixToRows(
   const idxNom = colOf('Nom')
   const idxPrenom = colOf('Prénom')
   const idxIdentifiant = colOf('Identifiant')
-  const idxFamille = colOf('Famille')
+  const idxFamille = colOfAny('Équipe', 'Famille')
   const idxModele = colOf('Modèle de contrat')
   const idxDate = colOf("Date d'entrée")
   const idxMdp = colOf(HEADER_MOT_DE_PASSE)
@@ -400,10 +411,10 @@ export function validateImportRows(
     if (!prenom) errors.push('Prénom manquant.')
     if (!identifiant) errors.push('Identifiant manquant.')
 
-    // Famille : doit correspondre à une famille existante.
+    // Équipe : doit correspondre à une équipe existante.
     const famille = r.famille.trim() ? famByNom.get(norm(r.famille)) : undefined
-    if (!r.famille.trim()) errors.push('Famille manquante.')
-    else if (!famille) errors.push(`Famille « ${r.famille} » inconnue.`)
+    if (!r.famille.trim()) errors.push('Équipe manquante.')
+    else if (!famille) errors.push(`Équipe « ${r.famille} » inconnue.`)
 
     // Modèle de contrat : doit correspondre à un modèle existant (par libellé).
     const modele = r.modele.trim() ? modByNom.get(norm(r.modele)) : undefined

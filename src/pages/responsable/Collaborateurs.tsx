@@ -185,7 +185,7 @@ export default function Collaborateurs() {
     },
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       sortable: true,
       sortAccessor: (c) => familleNom(c.familleId),
       render: (c) => familleNom(c.familleId),
@@ -257,7 +257,7 @@ export default function Collaborateurs() {
   const filters: FacetDef<Collaborateur>[] = [
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       type: 'select',
       options: familles.map((f) => ({ value: f.id, label: f.nom })),
       accessor: (c) => c.familleId,
@@ -335,7 +335,7 @@ export default function Collaborateurs() {
               <FieldError id="collab-nom-err" message={errors.nom} />
             </div>
             <div className="form-row">
-              <label htmlFor="fam">Famille</label>
+              <label htmlFor="fam">Équipe</label>
               <select
                 id="fam"
                 value={draft.familleId}

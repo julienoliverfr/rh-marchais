@@ -21,15 +21,15 @@ const GROUPES: GroupeAdmin[] = [
     titre: 'Organisation',
     cartes: [
       {
-        titre: 'Familles',
+        titre: 'Équipes',
         description:
-          'Familles Vignes / Marchais : mode de saisie et pause déduite.',
+          'Équipes Vignes / Marchais : mode de saisie et pause déduite.',
         to: '/responsable/familles',
       },
       {
         titre: 'Collaborateurs',
         description:
-          'Fiches collaborateurs, famille de rattachement et contrat.',
+          'Fiches collaborateurs, équipe de rattachement et contrat.',
         to: '/responsable/collaborateurs',
       },
     ],

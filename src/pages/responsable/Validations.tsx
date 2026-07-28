@@ -191,7 +191,7 @@ export default function Validations() {
   // Facettes communes : Famille (par nom).
   const familleFacet = (rows: Saisie[]): FacetDef<Saisie> => ({
     key: 'famille',
-    label: 'Famille',
+    label: 'Équipe',
     type: 'select',
     options: familles
       .filter((f) => rows.some((s) => metaOf(s).famille?.id === f.id))
@@ -213,7 +213,7 @@ export default function Validations() {
     },
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       render: (s) => {
         const f = metaOf(s).famille
         return f ? <span className={famillePillClass(f.nom)}>{f.nom}</span> : null
@@ -348,7 +348,7 @@ export default function Validations() {
     },
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       render: (s) => {
         const f = metaOf(s).famille
         return f ? <span className={famillePillClass(f.nom)}>{f.nom}</span> : null

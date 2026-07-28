@@ -22,7 +22,7 @@ export default function Saisie() {
   if (!collaborateur || !famille) {
     return (
       <div className="card">
-        <p>Aucun collaborateur/famille rattaché à ce compte.</p>
+        <p>Aucun collaborateur/équipe rattaché à ce compte.</p>
       </div>
     )
   }
@@ -33,7 +33,7 @@ export default function Saisie() {
         Saisie des heures
       </h2>
       <p className="muted">
-        Famille <strong>{famille.nom}</strong> —{' '}
+        Équipe <strong>{famille.nom}</strong> —{' '}
         {famille.modeSaisie === 'journee_continue' ? (
           'journée continue'
         ) : (

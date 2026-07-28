@@ -40,25 +40,25 @@ export default function Familles() {
     e.preventDefault()
     if (!draft) return
     if (!draft.nom.trim()) {
-      setNomError('Le nom de la famille est obligatoire.')
+      setNomError("Le nom de l'équipe est obligatoire.")
       return
     }
     saveFamille(draft)
     setDraft(null)
     setNomError(null)
-    toast.success('Famille enregistrée.')
+    toast.success('Équipe enregistrée.')
   }
 
   async function handleDelete(f: Famille) {
     const ok = await confirm({
-      title: 'Supprimer la famille',
-      message: `Voulez-vous supprimer la famille « ${f.nom} » ? Cette action est définitive.`,
+      title: "Supprimer l'équipe",
+      message: `Voulez-vous supprimer l'équipe « ${f.nom} » ? Cette action est définitive.`,
       confirmLabel: 'Supprimer',
       danger: true,
     })
     if (!ok) return
     deleteFamille(f.id)
-    toast.success('Famille supprimée.')
+    toast.success('Équipe supprimée.')
   }
 
   function usedBy(familleId: string): number {
@@ -113,7 +113,7 @@ export default function Familles() {
             disabled={usedBy(f.id) > 0}
             title={
               usedBy(f.id) > 0
-                ? 'Famille utilisée par des collaborateurs'
+                ? 'Équipe utilisée par des collaborateurs'
                 : 'Supprimer'
             }
             onClick={() => handleDelete(f)}
@@ -130,16 +130,16 @@ export default function Familles() {
       <Breadcrumb
         items={[
           { label: 'Administration', to: '/responsable/admin' },
-          { label: 'Familles' },
+          { label: 'Équipes' },
         ]}
       />
       <div className="page-head">
         <h2 className="section-title" style={{ margin: 0 }}>
-          Familles
+          Équipes
         </h2>
         {!draft && (
           <button className="btn ocre small" onClick={startCreate}>
-            + Nouvelle famille
+            + Nouvelle équipe
           </button>
         )}
       </div>
@@ -147,7 +147,7 @@ export default function Familles() {
       {draft && (
         <form className="card" onSubmit={handleSave} style={{ marginTop: '1rem' }}>
           <h3 className="section-title" style={{ marginTop: 0 }}>
-            {familles.some((f) => f.id === draft.id) ? 'Éditer' : 'Créer'} une famille
+            {familles.some((f) => f.id === draft.id) ? 'Éditer' : 'Créer'} une équipe
           </h3>
           <div className="form-row">
             <label htmlFor="nom">Nom</label>
@@ -212,10 +212,10 @@ export default function Familles() {
           rows={familles}
           columns={columns}
           rowKey={(f) => f.id}
-          search={{ accessor: (f) => f.nom, placeholder: 'Rechercher une famille…' }}
+          search={{ accessor: (f) => f.nom, placeholder: 'Rechercher une équipe…' }}
           defaultSort={{ key: 'nom', dir: 'asc' }}
           storageKey="familles"
-          emptyLabel="Aucune famille."
+          emptyLabel="Aucune équipe."
         />
       </div>
     </div>

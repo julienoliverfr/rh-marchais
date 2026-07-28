@@ -59,7 +59,7 @@ export default function SaisiePourAutrui() {
       {collaborateur && famille ? (
         <div className="card">
           <p className="muted">
-            Famille <strong>{famille.nom}</strong> —{' '}
+            Équipe <strong>{famille.nom}</strong> —{' '}
             {famille.modeSaisie === 'journee_continue'
               ? 'journée continue'
               : 'demi-journées'}

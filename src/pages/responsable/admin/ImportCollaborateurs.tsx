@@ -153,7 +153,7 @@ export default function ImportCollaborateurs() {
     },
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       sortable: true,
       sortAccessor: (r) => r.raw.famille,
       render: (r) => r.raw.famille || '—',
@@ -241,7 +241,7 @@ export default function ImportCollaborateurs() {
             Colonnes attendues :{' '}
             <strong>{buildImportHeaders(typesSolde).join(' · ')}</strong>.
             <br />
-            Requis : Nom, Prénom, Identifiant, Famille, Modèle de contrat.
+            Requis : Nom, Prénom, Identifiant, Équipe, Modèle de contrat.
             Optionnels : Date d'entrée (AAAA-MM-JJ ou JJ/MM/AAAA), un solde
             initial par type à solde (nombre, virgule FR), Mot de passe (défaut
             «&nbsp;{MOT_DE_PASSE_DEFAUT}&nbsp;» si vide).

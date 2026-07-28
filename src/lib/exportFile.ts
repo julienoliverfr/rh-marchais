@@ -15,7 +15,7 @@ import { neutralizeFormula } from './csvSafe'
 // insérées dynamiquement APRÈS, dans l'ordre de `recap.colonnesTypes`.
 const HEADERS_FIXES = [
   'Collaborateur',
-  'Famille',
+  'Équipe',
   'Contrat',
   'Heures normales',
   'Heures sup.',

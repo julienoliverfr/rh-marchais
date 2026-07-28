@@ -153,7 +153,7 @@ export default function Conges() {
     },
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       render: (c) => {
         const nom = familleNomDe(c)
         return nom ? <span className={famillePillClass(nom)}>{nom}</span> : null
@@ -268,7 +268,7 @@ export default function Conges() {
     },
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       type: 'select',
       options: familles.map((f) => ({ value: f.nom, label: f.nom })),
       accessor: (c) => familleNomDe(c),
@@ -286,7 +286,7 @@ export default function Conges() {
     },
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       render: (col) => {
         const nom = familleById.get(col.familleId)?.nom
         return nom ? <span className={famillePillClass(nom)}>{nom}</span> : null
@@ -369,7 +369,7 @@ export default function Conges() {
   const soldesFilters: FacetDef<Collaborateur>[] = [
     {
       key: 'famille',
-      label: 'Famille',
+      label: 'Équipe',
       type: 'select',
       options: familles.map((f) => ({ value: f.id, label: f.nom })),
       accessor: (col) => col.familleId,
