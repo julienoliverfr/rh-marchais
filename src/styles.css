@@ -1,0 +1,1497 @@
+:root {
+  /* Couleurs de marque ETS Marchais : bleu foncé, rouge, jaune */
+  --navy: #17356C;
+  --navy-dark: #0F2650;
+  --navy-soft: #E7ECF6;
+  --red: #D2382A;
+  --red-dark: #B12A1F;
+  --red-soft: #FBE7E4;
+  --yellow: #F4C01A;
+  --yellow-dark: #C29200;
+  --yellow-soft: #FDF3CE;
+  /* Alias sémantiques : primaire = bleu foncé, secondaire = rouge */
+  --vigne: var(--navy);
+  --vigne-dark: var(--navy-dark);
+  --ocre: var(--red);
+  --ocre-dark: var(--red-dark);
+  --bg: #F7F8FB;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --border: #e2e5ec;
+  --text: #1B2540;
+  --text-muted: #5b6478;
+  --danger: #C0392B;
+  --ok: #17356C;
+  --warn: #C29200;
+  /* Texte sombre pour lecture AA sur fonds jaunes (badges/avertissements) :
+     on assombrit LE TEXTE, jamais la couleur de marque. Non-palette. */
+  --warn-text: #6b5200;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(23, 53, 108, 0.08), 0 4px 12px rgba(23, 53, 108, 0.05);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--vigne);
+}
+
+/* ---------- Layout ---------- */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  background: var(--navy);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: var(--shadow);
+  border-bottom: 3px solid var(--yellow);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar .brand::before {
+  content: '';
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--yellow);
+  color: var(--navy-dark);
+  margin-right: 0.15rem;
+  flex: none;
+  background-image: linear-gradient(var(--yellow), var(--yellow));
+}
+
+.topbar .brand {
+  font-weight: 700;
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar .user {
+  font-size: 0.85rem;
+  opacity: 0.95;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 52px;
+  z-index: 9;
+}
+
+.nav a {
+  text-decoration: none;
+  color: var(--text-muted);
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.nav a.active {
+  background: var(--surface-2);
+  color: var(--vigne);
+}
+
+.content {
+  flex: 1;
+  width: 100%;
+  /* Espace employé : colonne confortable mobile-first, centrée. */
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Espace responsable / admin (data-heavy) : conteneur large et fluide pour que
+   les tableaux respirent sans scroll horizontal, avec un padding latéral. */
+.content.is-wide {
+  max-width: 1340px;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+/* En-tête de page homogène : titre + action primaire sur une même ligne. */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Fil d'Ariane (pages de configuration / administration). */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+}
+
+.breadcrumb a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.breadcrumb a:hover {
+  color: var(--vigne);
+}
+
+.breadcrumb-sep {
+  color: var(--text-muted);
+}
+
+.breadcrumb .breadcrumb-current {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* ---------- Cards & grid ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.card + .card {
+  margin-top: 1rem;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.stat .label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.stat .value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin-top: 0.25rem;
+  color: var(--vigne);
+}
+
+.stat.accent .value {
+  color: var(--ocre);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+/* ---------- Forms ---------- */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+input,
+select {
+  font: inherit;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  width: 100%;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid var(--vigne);
+  outline-offset: 1px;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  padding: 0.8rem 1.1rem;
+  cursor: pointer;
+  background: var(--vigne);
+  color: #fff;
+  min-height: 48px;
+}
+
+.btn:hover {
+  background: var(--vigne-dark);
+}
+
+.btn.secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn.ocre {
+  background: var(--ocre);
+}
+
+.btn.ocre:hover {
+  background: var(--ocre-dark);
+}
+
+.btn.danger {
+  background: var(--danger);
+}
+
+.btn.small {
+  padding: 0.45rem 0.7rem;
+  min-height: auto;
+  font-size: 0.85rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ---------- Badges / status ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  vertical-align: middle;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Icône de statut : légèrement plus petite que le libellé, purement visuelle. */
+.badge-icon {
+  font-size: 0.85em;
+  line-height: 1;
+}
+
+.badge.en_attente {
+  background: var(--yellow-soft);
+  /* Texte assombri pour un contraste AA sur le jaune très clair. */
+  color: var(--warn-text);
+}
+.badge.validee {
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+.badge.refusee {
+  background: var(--red-soft);
+  color: var(--danger);
+}
+.badge.verrouillee {
+  background: #ececec;
+  color: #555;
+}
+
+.pill-fam {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.pill-fam.vignes {
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+.pill-fam.marchais {
+  background: var(--red-soft);
+  color: var(--red-dark);
+}
+
+/* ---------- Tables (responsable large screen) ---------- */
+/* Le conteneur défilant porte lui-même le cadre : padding 0 pour que l'en-tête
+   collant (top:0) reste flush en haut, sans « fuite » de lignes dans une marge. */
+.table-wrap {
+  overflow-x: auto;
+  padding: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: left;
+  /* Lignes denses : padding vertical réduit + alignement vertical centré. */
+  padding: 0.5rem 0.65rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* Colonnes numériques (align right) : chiffres tabulaires pour un alignement net. */
+td.dt-right,
+th.dt-right {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Survol de ligne : aide au balayage visuel (couleur de marque très légère). */
+tbody tr:hover td {
+  background: var(--navy-soft);
+}
+
+/* ---------- En-tête collant + colonne d'actions collante (desktop) ---------- */
+@media (min-width: 721px) {
+  /* Conteneur défilant borné en hauteur : le corps défile, l'en-tête reste. */
+  .table-wrap {
+    max-height: calc(100vh - 220px);
+    overflow: auto;
+  }
+
+  .table-wrap thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--surface);
+  }
+
+  /* Cellule d'actions toujours visible : collée à droite, avec un fond opaque
+     et un fin séparateur, même si un scroll horizontal subsiste. */
+  td.dt-sticky-right,
+  th.dt-sticky-right {
+    position: sticky;
+    right: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+  }
+
+  td.dt-sticky-right {
+    z-index: 1;
+  }
+
+  /* L'en-tête de la colonne d'actions couvre l'angle haut-droit. */
+  th.dt-sticky-right {
+    z-index: 3;
+  }
+
+  /* Le fond de la cellule collante suit l'état de survol de la ligne. */
+  tbody tr:hover td.dt-sticky-right {
+    background: var(--navy-soft);
+  }
+}
+
+/* ---------- Bascule tableau → cartes (mobile, < 720px) ---------- */
+/* Générique : toute table rendue par DataTable (classe `dt-cards`) devient une
+   pile de cartes libellé/valeur, au lieu d'un tableau qui déborde. */
+@media (max-width: 720px) {
+  .dt-cards {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .dt-cards table {
+    font-size: 0.92rem;
+  }
+
+  .dt-cards thead {
+    display: none;
+  }
+
+  .dt-cards tbody,
+  .dt-cards tr,
+  .dt-cards td {
+    display: block;
+  }
+
+  .dt-cards tbody tr {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    padding: 0.35rem 0.75rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .dt-cards tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .dt-cards td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: right;
+    white-space: normal;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dt-cards tbody tr td:last-child {
+    border-bottom: none;
+  }
+
+  /* Libellé de colonne rappelé à gauche de chaque valeur (data-label). */
+  .dt-cards td[data-label]::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
+
+  /* Cellule sans libellé (actions) : occupe toute la largeur, alignée à droite. */
+  .dt-cards td:not([data-label]) {
+    justify-content: flex-end;
+  }
+
+  /* État vide : bloc centré sur toute la largeur de la carte. */
+  .dt-cards td.dt-empty {
+    display: block;
+    text-align: center;
+  }
+}
+
+/* ---------- List items (mobile employe) ---------- */
+.entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.entry + .entry {
+  margin-top: 0.5rem;
+}
+
+.entry .main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.entry .date {
+  font-weight: 700;
+}
+
+.lock {
+  color: var(--text-muted);
+}
+
+/* ---------- Alerts ---------- */
+.alert {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  margin-bottom: 0.85rem;
+}
+.alert.error {
+  background: var(--red-soft);
+  color: var(--danger);
+}
+.alert.info {
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+
+/* ---------- Login ---------- */
+.login-wrap {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.login-card h1 {
+  margin: 0 0 0.25rem;
+  color: var(--vigne);
+  font-size: 1.4rem;
+}
+
+.demo-accounts {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.demo-accounts code {
+  background: var(--surface-2);
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+}
+
+.seg {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.seg button {
+  flex: 1;
+  min-width: 90px;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.seg button.active {
+  background: var(--vigne);
+  color: #fff;
+  border-color: var(--vigne);
+}
+
+/* ---------- DataTable (tri + filtres + pagination) ---------- */
+/* Règles NEUTRES : réutilisent uniquement les variables du thème existant.   */
+
+.dt-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.dt-spacer {
+  flex: 1 1 auto;
+}
+
+/* Champ recherche + loupe */
+.dt-search {
+  position: relative;
+  flex: 0 1 260px;
+  min-width: 180px;
+}
+
+.dt-search-icon {
+  position: absolute;
+  left: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.dt-search input {
+  padding-left: 2rem;
+}
+
+/* Facettes */
+.dt-facets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dt-facet {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.dt-facet-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dt-facet select {
+  width: auto;
+  min-width: 120px;
+  padding: 0.45rem 0.6rem;
+}
+
+.dt-count {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* Bouton de repli des facettes : masqué au-dessus de 700px */
+.dt-filter-toggle {
+  display: none;
+}
+
+/* Chips des filtres actifs */
+.dt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.dt-chip {
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.dt-chip:hover {
+  border-color: var(--vigne);
+  color: var(--vigne);
+}
+
+/* En-têtes triables */
+th.dt-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+th.dt-sortable:hover {
+  color: var(--vigne);
+}
+
+th.dt-sortable:focus-visible {
+  outline: 2px solid var(--vigne);
+  outline-offset: -2px;
+}
+
+.dt-th-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.dt-arrow {
+  display: inline-block;
+  min-width: 0.75em;
+  color: var(--vigne);
+  font-weight: 700;
+}
+
+/* Alignements de colonnes */
+.dt-right {
+  text-align: right;
+}
+
+.dt-center {
+  text-align: center;
+}
+
+/* État vide dans le corps du tableau */
+td.dt-empty {
+  text-align: center;
+  padding: 1.5rem 0.65rem;
+  white-space: normal;
+}
+
+/* Pagination */
+.dt-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+}
+
+.dt-pagesize {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.dt-pagesize select {
+  width: auto;
+  padding: 0.4rem 0.6rem;
+}
+
+.dt-pagesize .muted {
+  font-size: 0.82rem;
+}
+
+.dt-pager {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dt-range {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* ---------- Hub Administration (cartes de navigation) ---------- */
+/* Règles NEUTRES : réutilisent uniquement les variables du thème existant.    */
+
+.admin-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  align-items: stretch;
+  margin-bottom: 0.5rem;
+}
+
+.admin-card,
+.admin-card + .admin-card {
+  margin-top: 0;
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  height: 100%;
+  min-height: 132px;
+  text-decoration: none;
+  color: var(--text);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.admin-card:hover {
+  border-color: var(--vigne);
+  box-shadow: 0 2px 6px rgba(23, 53, 108, 0.12), 0 8px 20px rgba(23, 53, 108, 0.08);
+  transform: translateY(-1px);
+}
+
+.admin-card-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--vigne);
+}
+
+.admin-card-desc {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.admin-card-cta {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ocre);
+}
+
+/* Responsive : sous ~700px, les facettes se replient derrière « Filtrer ». */
+@media (max-width: 700px) {
+  .dt-search {
+    flex: 1 1 100%;
+  }
+  .dt-filter-toggle {
+    display: inline-flex;
+  }
+  .dt-facets {
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+  }
+  .dt-facets.dt-open {
+    display: flex;
+  }
+  .dt-facet {
+    justify-content: space-between;
+  }
+  .dt-facet select {
+    flex: 1 1 auto;
+  }
+}
+
+/* ============================================================================
+   AIDE CONTEXTUELLE — bouton « ? Aide », panneau, bulles « ? », écrans vides.
+   Règles NEUTRES : réutilisent uniquement les variables de thème existantes.
+   ============================================================================ */
+
+/* ---------- Bouton flottant « ? Aide » (grande cible ≥ 44px) ---------- */
+.help-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding: 0 1.1rem;
+  border: 2px solid var(--yellow);
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.help-fab:hover {
+  background: var(--navy-dark);
+}
+
+.help-fab:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+.help-fab-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--navy-dark);
+  font-weight: 900;
+}
+
+/* ---------- Panneau d'aide (tiroir latéral desktop) ---------- */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 38, 80, 0.4);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.help-panel {
+  width: 100%;
+  max-width: 400px;
+  height: 100%;
+  background: var(--surface);
+  border-left: 4px solid var(--yellow);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.help-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  background: var(--navy);
+  color: #fff;
+}
+
+.help-panel-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.help-panel-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.help-panel-close:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.help-panel-close:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+.help-panel-body {
+  padding: 1.1rem;
+  flex: 1;
+}
+
+.help-panel-body p {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.help-panel-foot {
+  padding: 1.1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.help-panel-link {
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+}
+
+.help-phone {
+  margin: 0.85rem 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.help-phone a {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Plein écran sur mobile. */
+@media (max-width: 560px) {
+  .help-panel {
+    max-width: 100%;
+    border-left: none;
+    border-top: 4px solid var(--yellow);
+  }
+}
+
+/* ---------- Bulle « ? » (HelpTip) ---------- */
+.help-tip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.help-tip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--navy-soft);
+  color: var(--navy);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.help-tip-btn:hover {
+  background: var(--navy);
+  color: #fff;
+}
+
+.help-tip-btn:focus-visible {
+  outline: 2px solid var(--vigne);
+  outline-offset: 2px;
+}
+
+.help-tip-pop {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  z-index: 30;
+  width: max-content;
+  max-width: 240px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+}
+
+/* ---------- Écrans vides qui guident (EmptyState) ---------- */
+.empty-state {
+  text-align: center;
+  padding: 2rem 1.25rem;
+}
+
+.empty-state-icon {
+  font-size: 2.6rem;
+  line-height: 1;
+  margin-bottom: 0.6rem;
+}
+
+.empty-state-text {
+  margin: 0 auto;
+  max-width: 32ch;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.empty-state-action {
+  margin-top: 1rem;
+}
+
+/* ---------- Légende des statuts (Historique) ---------- */
+.statut-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.statut-legende-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* ---------- Bouton d'action « Saisir mes heures » (tableau de bord) ---------- */
+.dash-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+/* ---------- Page Aide (FAQ) ---------- */
+.aide-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+.aide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.aide-title {
+  margin: 0;
+  color: var(--vigne);
+  font-size: 1.5rem;
+}
+
+.aide-intro {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.faq-item {
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-item:first-child {
+  padding-top: 0;
+}
+
+.faq-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.faq-q {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--vigne);
+}
+
+.faq-a {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.faq-couleurs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.faq-couleurs li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.faq-couleur-texte {
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+.aide-contact {
+  margin-top: 1rem;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ============================================================================
+   FINITIONS UX — toasts, confirmation, navigation basse, validation en ligne,
+   focus visible. Règles NEUTRES : réutilisent les variables de thème existantes.
+   ============================================================================ */
+
+/* ---------- Erreur sous un champ (validation en ligne) ---------- */
+.field-error {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* Champ en erreur : bordure rouge nette (accessibilité + repérage). */
+input[aria-invalid='true'],
+select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+input[aria-invalid='true']:focus,
+select[aria-invalid='true']:focus {
+  outline-color: var(--danger);
+}
+
+/* ---------- Toasts (retours d'action) ---------- */
+.toast-region {
+  position: fixed;
+  right: 1rem;
+  /* Au-dessus du bouton flottant « ? Aide » (bottom:1rem, ~52px de haut). */
+  bottom: 4.75rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(360px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  pointer-events: auto;
+  animation: toast-in 0.18s ease-out;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #fff;
+  margin-top: 0.05rem;
+}
+
+.toast-msg {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.toast-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.toast-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.toast-success {
+  border-left-color: var(--navy);
+}
+.toast-success .toast-icon {
+  background: var(--navy);
+}
+.toast-error {
+  border-left-color: var(--danger);
+}
+.toast-error .toast-icon {
+  background: var(--danger);
+}
+.toast-info {
+  border-left-color: var(--yellow-dark);
+}
+.toast-info .toast-icon {
+  background: var(--yellow-dark);
+}
+
+/* ---------- Boîte de confirmation (ConfirmDialog) ---------- */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(15, 38, 80, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.confirm-dialog {
+  width: 100%;
+  max-width: 420px;
+  border-top: 4px solid var(--yellow);
+}
+
+.confirm-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--vigne);
+}
+
+.confirm-message {
+  margin: 0 0 1rem;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.confirm-actions {
+  justify-content: flex-end;
+}
+
+/* ---------- Navigation basse (employé, mobile) ---------- */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: flex;
+    justify-content: space-around;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 8px rgba(23, 53, 108, 0.06);
+    padding: 0.2rem 0.25rem;
+    padding-bottom: max(0.2rem, env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.1rem;
+    min-height: 52px;
+    padding: 0.25rem;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 10px;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--vigne);
+    background: var(--surface-2);
+  }
+
+  .bottom-nav-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  /* On dégage l'espace bas occupé par la barre + on remonte le bouton d'aide,
+     uniquement quand la barre basse est présente (espace employé). */
+  .app-shell.has-bottomnav .content {
+    padding-bottom: 5rem;
+  }
+
+  .app-shell.has-bottomnav .help-fab {
+    bottom: 5rem;
+  }
+
+  /* Sur mobile le FAB remonte (barre basse) : les toasts passent au-dessus. */
+  .toast-region {
+    bottom: 8.75rem;
+  }
+}
+
+/* ---------- Focus visible homogène (accessibilité clavier) ---------- */
+.btn:focus-visible,
+a:focus-visible,
+.nav a:focus-visible,
+.bottom-nav-item:focus-visible,
+.seg button:focus-visible,
+.dt-chip:focus-visible,
+.toast-close:focus-visible,
+[role='button']:focus-visible {
+  outline: 3px solid var(--vigne);
+  outline-offset: 2px;
+}
+
+/* Sur les fonds foncés (barre de titre), l'anneau jaune reste visible. */
+.topbar .btn:focus-visible {
+  outline-color: var(--yellow);
+}
+
+/* ---------- État occupé (boutons pendant une génération) ---------- */
+.btn.is-busy {
+  opacity: 0.7;
+  cursor: progress;
+}
