@@ -669,6 +669,15 @@ export class SupabaseRepository implements Repository {
     )
   }
 
+  // Insertion SIMPLE (append-only) : surtout PAS d'upsert. Un upsert (INSERT …
+  // ON CONFLICT DO UPDATE) exige une permission UPDATE côté Postgres (branche
+  // « DO UPDATE »), même sans conflit réel ; or les tables append-only comme
+  // `audit_log` n'ont volontairement AUCUNE policy UPDATE → l'upsert serait
+  // refusé par la RLS. On insère donc en clair. Voir supabase/rls.sql.
+  private insertRow(table: string, row: object, contexte: string): void {
+    this.track(this.sb.from(table).insert(row as never), contexte)
+  }
+
   private removeRow(table: string, column: string, value: string, contexte: string): void {
     this.track(this.sb.from(table).delete().eq(column, value), contexte)
   }
@@ -1027,7 +1036,7 @@ export class SupabaseRepository implements Repository {
       congeId: cibleType === 'conge' ? cibleId : undefined,
     }
     this.audit.push(entry)
-    this.upsert(
+    this.insertRow(
       'audit_log',
       {
         id: entry.id,
