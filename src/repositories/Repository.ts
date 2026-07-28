@@ -77,6 +77,15 @@ export interface Repository {
   saveCompte(compte: Compte): void
   deleteCompte(id: string): void
 
+  // Réinitialisation du mot de passe d'un compte EXISTANT (l'identifiant/e-mail
+  // n'est pas modifié).
+  // SUPABASE SWAP POINT
+  // Deviendra un appel à la fonction SECURITY DEFINER `admin_reset_password`
+  // (garde « responsable uniquement » côté base) ; le mot de passe est haché en
+  // base et n'est jamais stocké en clair côté appli. En mode local (démo), met
+  // simplement à jour le mot de passe stocké.
+  resetPassword(userId: string, nouveauMotDePasse: string): void
+
   // Règles générales (singleton paramétrable)
   // SUPABASE SWAP POINT
   // Deviendra une table `regles_generales` à une seule ligne (ou une config).

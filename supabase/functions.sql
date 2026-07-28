@@ -129,7 +129,44 @@ begin
 end;
 $$;
 
+-- --------------------------------------------------------- admin_reset_password
+-- Réinitialise le mot de passe d'un utilisateur d'auth EXISTANT (l'identifiant /
+-- e-mail n'est PAS modifié). Réservé au responsable connecté. Simple mise à jour
+-- de la ligne `auth.users` (pas besoin de toucher aux identités ni aux jetons).
+create or replace function public.admin_reset_password(
+  p_user_id             uuid,
+  p_nouveau_mot_de_passe text
+) returns void
+language plpgsql
+security definer
+set search_path = public, auth, extensions
+as $$
+begin
+  -- GARDE : réservé au responsable connecté (décision prise côté base).
+  if not public.is_responsable() then
+    raise exception 'Action réservée au responsable.' using errcode = '42501';
+  end if;
+
+  if p_user_id is null then
+    raise exception 'Utilisateur cible obligatoire.' using errcode = '22023';
+  end if;
+  if p_nouveau_mot_de_passe is null or p_nouveau_mot_de_passe = '' then
+    raise exception 'Le nouveau mot de passe est obligatoire.' using errcode = '22023';
+  end if;
+
+  update auth.users
+     set encrypted_password = crypt(p_nouveau_mot_de_passe, gen_salt('bf')),
+         updated_at = now()
+   where id = p_user_id;
+
+  if not found then
+    raise exception 'Compte introuvable.' using errcode = 'P0002';
+  end if;
+end;
+$$;
+
 -- Exécution autorisée à tout utilisateur connecté ; l'autorisation FINE
 -- (responsable uniquement) est portée par la garde dans le corps des fonctions.
 grant execute on function public.admin_create_login(text, text, text, uuid, text) to authenticated;
 grant execute on function public.admin_delete_login(uuid) to authenticated;
+grant execute on function public.admin_reset_password(uuid, text) to authenticated;

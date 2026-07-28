@@ -18,9 +18,13 @@ const ROLE_LABELS: Record<Role, string> = {
   responsable: 'Responsable',
 }
 
-// Brouillon de création (le mot de passe n'existe qu'à la création ; il n'est
-// jamais réaffiché ensuite).
+// Brouillon de création OU d'édition.
+// - `id === null` : création (le mot de passe est OBLIGATOIRE et n'existe qu'ici).
+// - `id !== null` : édition d'un compte existant. L'identifiant est en LECTURE
+//   SEULE (le changer côté auth est hors périmètre) ; le champ mot de passe est
+//   alors OPTIONNEL (« nouveau mot de passe » ; vide = inchangé).
 interface Draft {
+  id: string | null
   identifiant: string
   motDePasse: string
   role: Role
@@ -28,29 +32,51 @@ interface Draft {
   nomAffichage: string
 }
 
-// Gestion des comptes de connexion : liste + création + suppression.
-// On empêche la suppression de son propre compte.
+interface FormErrors {
+  identifiant?: string
+  motDePasse?: string
+  role?: string
+}
+
+// Gestion des comptes de connexion : liste + création + édition + suppression.
+// On empêche la suppression de son propre compte et l'auto-rétrogradation.
 export default function Utilisateurs() {
   const session = useAuthStore((s) => s.session)
   const comptes = useDataStore((s) => s.comptes)
   const collaborateurs = useDataStore((s) => s.collaborateurs)
   const saveCompte = useDataStore((s) => s.saveCompte)
   const deleteCompte = useDataStore((s) => s.deleteCompte)
+  const resetPassword = useDataStore((s) => s.resetPassword)
   const toast = useToast()
   const confirm = useConfirm()
 
   const [draft, setDraft] = useState<Draft | null>(null)
-  const [errors, setErrors] = useState<{ identifiant?: string; motDePasse?: string }>(
-    {},
-  )
+  const [errors, setErrors] = useState<FormErrors>({})
+
+  // Mode édition = brouillon rattaché à un compte existant.
+  const isEdition = draft?.id != null
 
   function newDraft(): Draft {
     return {
+      id: null,
       identifiant: '',
       motDePasse: '',
       role: 'employe',
       collaborateurId: '',
       nomAffichage: '',
+    }
+  }
+
+  // Brouillon pré-rempli à partir d'un compte existant (édition).
+  function editDraft(c: Compte): Draft {
+    return {
+      id: c.id,
+      identifiant: c.identifiant,
+      // Jamais réaffiché : champ « nouveau mot de passe » optionnel, vide au départ.
+      motDePasse: '',
+      role: c.role,
+      collaborateurId: c.collaborateurId ?? '',
+      nomAffichage: c.nomAffichage,
     }
   }
 
@@ -69,8 +95,55 @@ export default function Utilisateurs() {
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!draft) return
+
+    // ------------------------------- ÉDITION -------------------------------
+    if (draft.id != null) {
+      // Garde-fou : on ne se retire pas à soi-même le rôle responsable (on se
+      // priverait de l'accès à l'administration).
+      if (
+        draft.id === session?.compteId &&
+        session?.role === 'responsable' &&
+        draft.role !== 'responsable'
+      ) {
+        setErrors({
+          role: 'Vous ne pouvez pas retirer votre propre rôle responsable.',
+        })
+        return
+      }
+
+      const existant = comptes.find((c) => c.id === draft.id)
+      const compte: Compte = {
+        id: draft.id,
+        // Identifiant NON modifiable en édition : on conserve la valeur d'origine.
+        identifiant: existant?.identifiant ?? draft.identifiant,
+        // On PRÉSERVE le mot de passe stocké (mode local) ; la réinitialisation
+        // éventuelle passe par resetPassword ci-dessous. En mode Supabase, le
+        // profil n'expose pas de mot de passe (chaîne vide, ignorée).
+        motDePasse: existant?.motDePasse ?? '',
+        role: draft.role,
+        collaborateurId:
+          draft.role === 'employe' && draft.collaborateurId
+            ? draft.collaborateurId
+            : undefined,
+        nomAffichage: defautNomAffichage(draft),
+      }
+      // 1) Mise à jour du profil (chemin « édition » existant de saveCompte).
+      saveCompte(compte)
+      // 2) Réinitialisation du mot de passe seulement si un nouveau est saisi.
+      if (draft.motDePasse) resetPassword(draft.id, draft.motDePasse)
+      setDraft(null)
+      setErrors({})
+      toast.success(
+        draft.motDePasse
+          ? `Utilisateur « ${compte.identifiant} » modifié (mot de passe réinitialisé).`
+          : `Utilisateur « ${compte.identifiant} » modifié.`,
+      )
+      return
+    }
+
+    // ------------------------------- CRÉATION ------------------------------
     const identifiant = draft.identifiant.trim().toLowerCase()
-    const nextErrors: { identifiant?: string; motDePasse?: string } = {}
+    const nextErrors: FormErrors = {}
     if (!identifiant) {
       nextErrors.identifiant = "L'identifiant est obligatoire."
     } else if (comptes.some((c) => c.identifiant === identifiant)) {
@@ -154,19 +227,32 @@ export default function Utilisateurs() {
     {
       key: 'actions',
       label: '',
+      align: 'right',
       render: (c) => (
-        <button
-          className="btn danger small"
-          disabled={c.id === session?.compteId}
-          title={
-            c.id === session?.compteId
-              ? 'Impossible de supprimer votre propre compte'
-              : 'Supprimer'
-          }
-          onClick={() => handleDelete(c)}
-        >
-          Suppr.
-        </button>
+        <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+          <button
+            className="btn secondary small"
+            title="Modifier"
+            onClick={() => {
+              setErrors({})
+              setDraft(editDraft(c))
+            }}
+          >
+            Modifier
+          </button>
+          <button
+            className="btn danger small"
+            disabled={c.id === session?.compteId}
+            title={
+              c.id === session?.compteId
+                ? 'Impossible de supprimer votre propre compte'
+                : 'Supprimer'
+            }
+            onClick={() => handleDelete(c)}
+          >
+            Suppr.
+          </button>
+        </div>
       ),
     },
   ]
@@ -212,7 +298,7 @@ export default function Utilisateurs() {
       {draft && (
         <form className="card" onSubmit={handleSave} style={{ marginTop: '1rem' }}>
           <h3 className="section-title" style={{ marginTop: 0 }}>
-            Créer un compte
+            {isEdition ? 'Modifier le compte' : 'Créer un compte'}
           </h3>
           <div className="form-grid">
             <div className="form-row">
@@ -220,6 +306,8 @@ export default function Utilisateurs() {
               <input
                 id="identifiant"
                 value={draft.identifiant}
+                readOnly={isEdition}
+                disabled={isEdition}
                 aria-invalid={errors.identifiant ? true : undefined}
                 aria-describedby={errors.identifiant ? 'user-id-err' : undefined}
                 onChange={(e) => {
@@ -227,16 +315,25 @@ export default function Utilisateurs() {
                   if (errors.identifiant)
                     setErrors((p) => ({ ...p, identifiant: undefined }))
                 }}
-                autoFocus
+                autoFocus={!isEdition}
               />
+              {isEdition && (
+                <span className="muted" style={{ fontSize: '0.85em' }}>
+                  L'identifiant d'un compte existant n'est pas modifiable.
+                </span>
+              )}
               <FieldError id="user-id-err" message={errors.identifiant} />
             </div>
             <div className="form-row">
-              <label htmlFor="mdp">Mot de passe</label>
+              <label htmlFor="mdp">
+                {isEdition ? 'Nouveau mot de passe' : 'Mot de passe'}
+              </label>
               <input
                 id="mdp"
                 type="password"
                 value={draft.motDePasse}
+                autoComplete="new-password"
+                placeholder={isEdition ? 'Laisser vide pour ne pas changer' : undefined}
                 aria-invalid={errors.motDePasse ? true : undefined}
                 aria-describedby={errors.motDePasse ? 'user-mdp-err' : undefined}
                 onChange={(e) => {
@@ -252,6 +349,8 @@ export default function Utilisateurs() {
               <select
                 id="role"
                 value={draft.role}
+                aria-invalid={errors.role ? true : undefined}
+                aria-describedby={errors.role ? 'user-role-err' : undefined}
                 onChange={(e) =>
                   setDraft({
                     ...draft,
@@ -265,6 +364,7 @@ export default function Utilisateurs() {
                 <option value="employe">Employé</option>
                 <option value="responsable">Responsable</option>
               </select>
+              <FieldError id="user-role-err" message={errors.role} />
             </div>
             {draft.role === 'employe' && (
               <div className="form-row">
@@ -297,7 +397,7 @@ export default function Utilisateurs() {
           </div>
           <div className="btn-row">
             <button className="btn" type="submit">
-              Créer le compte
+              {isEdition ? 'Enregistrer' : 'Créer le compte'}
             </button>
             <button
               className="btn secondary"

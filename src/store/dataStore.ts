@@ -73,6 +73,8 @@ interface DataState {
   // Comptes utilisateurs (CRUD)
   saveCompte: (compte: Compte) => void
   deleteCompte: (id: string) => void
+  // Réinitialise le mot de passe d'un compte existant (identifiant inchangé).
+  resetPassword: (userId: string, nouveauMotDePasse: string) => void
 
   // Règles générales + types d'absence (Administration)
   setRegles: (regles: ReglesGenerales) => void
@@ -214,6 +216,13 @@ export const useDataStore = create<DataState>((set, get) => {
 
     deleteCompte: (id) => {
       repository.deleteCompte(id)
+      set({ comptes: repository.getComptes() })
+    },
+
+    resetPassword: (userId, nouveauMotDePasse) => {
+      repository.resetPassword(userId, nouveauMotDePasse)
+      // Resynchronise (le mot de passe n'est pas affiché ; sans effet visible en
+      // mode Supabase, mais garde le state cohérent en mode local).
       set({ comptes: repository.getComptes() })
     },
 

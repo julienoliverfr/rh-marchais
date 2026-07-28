@@ -927,6 +927,24 @@ export class SupabaseRepository implements Repository {
       })
   }
 
+  // Réinitialise le mot de passe d'un compte EXISTANT via la fonction SECURITY
+  // DEFINER `admin_reset_password` (garde « responsable uniquement » côté base).
+  // Le mot de passe n'est jamais mis en cache (les profils ne l'exposent pas) :
+  // aucune écriture de cache, seule une erreur éventuelle est remontée à l'UI.
+  resetPassword(userId: string, nouveauMotDePasse: string): void {
+    // Promise.resolve : le builder Supabase est un PromiseLike (pas de `.catch`).
+    void Promise.resolve(
+      this.sb.rpc('admin_reset_password', {
+        p_user_id: userId,
+        p_nouveau_mot_de_passe: nouveauMotDePasse,
+      }),
+    )
+      .then(({ error }) => {
+        if (error) this.report('réinitialisation du mot de passe', error)
+      })
+      .catch((e: unknown) => this.report('réinitialisation du mot de passe', e))
+  }
+
   // --------------------------- Règles générales -----------------------------
   getRegles(): ReglesGenerales {
     return this.regles

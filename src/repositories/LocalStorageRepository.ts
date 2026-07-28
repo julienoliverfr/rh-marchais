@@ -354,6 +354,16 @@ export class LocalStorageRepository implements Repository {
     )
   }
 
+  // Mode démo : le mot de passe vit en clair dans localStorage (voir authStore).
+  // On met simplement à jour la ligne concernée ; aucune action si introuvable.
+  resetPassword(userId: string, nouveauMotDePasse: string): void {
+    const list = this.getComptes()
+    const idx = list.findIndex((c) => c.id === userId)
+    if (idx < 0) return
+    list[idx] = { ...list[idx], motDePasse: nouveauMotDePasse }
+    write(KEYS.comptes, list)
+  }
+
   // Règles générales (repli sur les valeurs par défaut si la clé est absente).
   getRegles(): ReglesGenerales {
     return read<ReglesGenerales>(KEYS.regles, REGLES_DEFAUT)

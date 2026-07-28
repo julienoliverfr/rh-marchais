@@ -3,6 +3,7 @@ import type { Collaborateur } from '../../types'
 import { useDataStore } from '../../store/dataStore'
 import DataTable from '../../components/DataTable'
 import type { ColumnDef, FacetDef } from '../../components/DataTable'
+import { Link } from 'react-router-dom'
 import Breadcrumb from '../../components/Breadcrumb'
 import FieldError from '../../components/FieldError'
 import { useToast } from '../../components/Toast'
@@ -236,9 +237,17 @@ export default function Collaborateurs() {
           Collaborateurs
         </h2>
         {!draft && (
-          <button className="btn ocre small" onClick={() => setDraft(newDraft())}>
-            + Nouveau collaborateur
-          </button>
+          <div className="btn-row">
+            <Link
+              to="/responsable/admin/import"
+              className="btn secondary small"
+            >
+              Importer (CSV / Excel)
+            </Link>
+            <button className="btn ocre small" onClick={() => setDraft(newDraft())}>
+              + Nouveau collaborateur
+            </button>
+          </div>
         )}
       </div>
 
