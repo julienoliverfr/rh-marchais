@@ -163,6 +163,14 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       'Le verrouillage après export empêche toute modification des heures envoyées.',
     ],
   },
+  '/responsable/admin/parametrage': {
+    title: 'Paramétrage',
+    lines: [
+      'Exportez la configuration (équipes, contrats, congés, fériés, règles) dans un fichier.',
+      'Ce fichier permet de retrouver vos réglages sur un nouveau serveur, sans tout ressaisir.',
+      'À l’import, un aperçu s’affiche avant enregistrement ; rien n’est jamais supprimé.',
+    ],
+  },
   '/responsable/admin/import': {
     title: 'Importer des collaborateurs',
     lines: [

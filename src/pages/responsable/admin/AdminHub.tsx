@@ -84,6 +84,12 @@ const GROUPES: GroupeAdmin[] = [
           'Import en masse de collaborateurs (CSV / Excel) : modèle, aperçu, validation, rapport.',
         to: '/responsable/admin/import',
       },
+      {
+        titre: 'Paramétrage',
+        description:
+          'Sauvegardez la configuration ou rejouez-la sur un autre serveur (fichier JSON).',
+        to: '/responsable/admin/parametrage',
+      },
     ],
   },
 ]

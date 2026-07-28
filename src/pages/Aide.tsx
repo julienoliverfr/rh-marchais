@@ -177,6 +177,15 @@ const GUIDE_ADMIN: GuideEntry[] = [
       'Fenêtre de saisie rétroactive, seuil d’heures supplémentaires par défaut, verrouillage après export.',
     ],
   },
+  {
+    titre: 'Paramétrage (sauvegarde & transfert)',
+    to: '/responsable/admin/parametrage',
+    lignes: [
+      'Exportez toute la configuration dans un fichier : équipes, modèles, types d’absence, politiques, fériés, règles.',
+      'Rejouez ce fichier sur un nouveau serveur pour retrouver vos réglages sans rien ressaisir.',
+      'L’import ajoute ou met à jour, mais ne supprime jamais : un aperçu s’affiche avant enregistrement.',
+    ],
+  },
 ]
 
 // Règles de gestion appliquées par l'application (expliquent les chiffres).
