@@ -22,6 +22,8 @@ interface Draft {
   base: number
   seuilHebdo: number
   congesSolde: number
+  // Liste des collaborateurs pour lesquels cette personne peut saisir.
+  peutSaisirPour: string[]
 }
 
 export default function Collaborateurs() {
@@ -45,6 +47,7 @@ export default function Collaborateurs() {
       base: m?.base ?? 35,
       seuilHebdo: m?.seuilHebdo ?? 35,
       congesSolde: m?.congesSolde ?? 25,
+      peutSaisirPour: [],
     }
   }
 
@@ -58,7 +61,20 @@ export default function Collaborateurs() {
       base: c.contrat.base,
       seuilHebdo: c.contrat.seuilHebdo,
       congesSolde: c.contrat.congesSolde,
+      peutSaisirPour: c.peutSaisirPour ?? [],
     }
+  }
+
+  // Ajoute/retire une cible de délégation dans le brouillon courant.
+  function toggleDelegation(cibleId: string) {
+    if (!draft) return
+    const has = draft.peutSaisirPour.includes(cibleId)
+    setDraft({
+      ...draft,
+      peutSaisirPour: has
+        ? draft.peutSaisirPour.filter((id) => id !== cibleId)
+        : [...draft.peutSaisirPour, cibleId],
+    })
   }
 
   // Le choix d'un modèle pré-remplit base / seuil / congés.
@@ -98,6 +114,8 @@ export default function Collaborateurs() {
         seuilHebdo: draft.seuilHebdo,
         congesSolde: draft.congesSolde,
       },
+      // Auto-référence exclue par sécurité (on saisit déjà pour soi).
+      peutSaisirPour: draft.peutSaisirPour.filter((id) => id !== draft.id),
     }
     saveCollaborateur(collaborateur)
     setDraft(null)
@@ -157,6 +175,21 @@ export default function Collaborateurs() {
       sortType: 'number',
       sortAccessor: (c) => c.contrat.congesSolde,
       render: (c) => `${c.contrat.congesSolde} j`,
+    },
+    {
+      key: 'delegation',
+      label: 'Délégation',
+      sortable: true,
+      sortType: 'number',
+      sortAccessor: (c) => c.peutSaisirPour?.length ?? 0,
+      render: (c) => {
+        const n = c.peutSaisirPour?.length ?? 0
+        return n > 0 ? (
+          `saisit pour ${n} collègue${n > 1 ? 's' : ''}`
+        ) : (
+          <span className="muted">—</span>
+        )
+      },
     },
     {
       key: 'actions',
@@ -314,6 +347,41 @@ export default function Collaborateurs() {
               />
             </div>
           </div>
+
+          <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>
+            Autorisé à saisir pour (délégation) :
+          </p>
+          {collaborateurs.filter((c) => c.id !== draft.id).length === 0 ? (
+            <p className="muted">Aucun autre collaborateur disponible.</p>
+          ) : (
+            <div className="form-row">
+              <div role="group" aria-label="Autorisé à saisir pour">
+                {collaborateurs
+                  .filter((c) => c.id !== draft.id)
+                  .map((c) => (
+                    <label
+                      key={c.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.15rem 0',
+                        fontWeight: 'normal',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={draft.peutSaisirPour.includes(c.id)}
+                        onChange={() => toggleDelegation(c.id)}
+                      />
+                      <span>
+                        {c.prenom} {c.nom} — {familleNom(c.familleId)}
+                      </span>
+                    </label>
+                  ))}
+              </div>
+            </div>
+          )}
 
           <div className="btn-row">
             <button className="btn" type="submit">

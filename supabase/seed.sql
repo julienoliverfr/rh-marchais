@@ -76,6 +76,15 @@ insert into public.contrats
   ('33333333-3333-3333-3333-333333333304', '22222222-2222-2222-2222-222222222204', 'jours',   7, 35,  8, '2026-07-01')
 on conflict (collaborateur_id) do nothing;
 
+-- ------------------------------------------------------------ delegations_saisie
+-- Délégation de démo : Jean Vasseur (employé, compte de démo) est autorisé à
+-- saisir les heures de Karim Benali (même famille Vignes, sans compte). Après
+-- connexion en tant que jean, l'entrée « Saisie pour un collègue » apparaît et
+-- le dropdown est limité à Karim.
+insert into public.delegations_saisie (delegant_collaborateur_id, cible_collaborateur_id) values
+  ('33333333-3333-3333-3333-333333333301', '33333333-3333-3333-3333-333333333303')
+on conflict (delegant_collaborateur_id, cible_collaborateur_id) do nothing;
+
 -- -------------------------------------------------------------------- saisies
 -- Quelques saisies récentes (dates relatives) pour peupler le tableau de bord.
 insert into public.saisies

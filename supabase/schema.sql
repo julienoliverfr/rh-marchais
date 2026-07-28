@@ -84,6 +84,26 @@ create table if not exists public.contrats (
   updated_at timestamptz not null default now()
 );
 
+-- ------------------------------------------------------------ delegations_saisie
+-- Délégation de saisie pour autrui : `delegant` est autorisé à saisir (créer /
+-- modifier) les heures de `cible`. Matérialise `Collaborateur.peutSaisirPour`.
+-- Clé composite (un couple unique) + FK cascade sur les deux collaborateurs.
+-- C'est la SOURCE DE VÉRITÉ utilisée par les policies RLS des `saisies`.
+create table if not exists public.delegations_saisie (
+  delegant_collaborateur_id uuid not null
+    references public.collaborateurs (id) on delete cascade,
+  cible_collaborateur_id uuid not null
+    references public.collaborateurs (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (delegant_collaborateur_id, cible_collaborateur_id),
+  -- On ne délègue pas « pour soi-même » (déjà couvert par le cas propriétaire).
+  check (delegant_collaborateur_id <> cible_collaborateur_id)
+);
+create index if not exists delegations_delegant_idx
+  on public.delegations_saisie (delegant_collaborateur_id);
+create index if not exists delegations_cible_idx
+  on public.delegations_saisie (cible_collaborateur_id);
+
 -- -------------------------------------------------------------------- saisies
 create table if not exists public.saisies (
   id uuid primary key default gen_random_uuid(),

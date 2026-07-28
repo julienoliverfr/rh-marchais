@@ -9,6 +9,7 @@ import Dashboard from './pages/employe/Dashboard'
 import Saisie from './pages/employe/Saisie'
 import Historique from './pages/employe/Historique'
 import MesConges from './pages/employe/MesConges'
+import SaisiePourCollegue from './pages/employe/SaisiePourCollegue'
 import SaisiePourAutrui from './pages/responsable/SaisiePourAutrui'
 import Validations from './pages/responsable/Validations'
 import Conges from './pages/responsable/Conges'
@@ -70,6 +71,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['employe']}>
                 <MesConges />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/saisie-collegue"
+            element={
+              <ProtectedRoute roles={['employe']}>
+                <SaisiePourCollegue />
               </ProtectedRoute>
             }
           />

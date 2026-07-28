@@ -205,14 +205,37 @@ export class LocalStorageRepository implements Repository {
 
   // Collaborateurs
   getCollaborateurs(): Collaborateur[] {
-    return read<Collaborateur[]>(KEYS.collaborateurs, [])
+    // Normalise `peutSaisirPour` (données historiques sans le champ = liste vide).
+    return read<Collaborateur[]>(KEYS.collaborateurs, []).map((c) => ({
+      ...c,
+      peutSaisirPour: c.peutSaisirPour ?? [],
+    }))
   }
 
   saveCollaborateur(collaborateur: Collaborateur): void {
     const list = this.getCollaborateurs()
+    // On persiste toujours la liste de délégation (normalisée) avec l'entité.
+    const normalise: Collaborateur = {
+      ...collaborateur,
+      peutSaisirPour: collaborateur.peutSaisirPour ?? [],
+    }
     const idx = list.findIndex((c) => c.id === collaborateur.id)
-    if (idx >= 0) list[idx] = collaborateur
-    else list.push(collaborateur)
+    if (idx >= 0) list[idx] = normalise
+    else list.push(normalise)
+    write(KEYS.collaborateurs, list)
+  }
+
+  // Remplace la liste des collaborateurs pour lesquels `collaborateurId` peut
+  // saisir. Aucune action si le collaborateur est introuvable.
+  setDelegationsSaisie(collaborateurId: string, ciblesIds: string[]): void {
+    const list = this.getCollaborateurs()
+    const idx = list.findIndex((c) => c.id === collaborateurId)
+    if (idx < 0) return
+    // On exclut une éventuelle auto-référence (on saisit déjà pour soi).
+    list[idx] = {
+      ...list[idx],
+      peutSaisirPour: ciblesIds.filter((id) => id !== collaborateurId),
+    }
     write(KEYS.collaborateurs, list)
   }
 

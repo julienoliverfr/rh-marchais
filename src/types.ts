@@ -53,6 +53,12 @@ export interface Collaborateur {
   nom: string
   familleId: string
   contrat: Contrat
+  // Délégation de saisie : liste d'`id` de collaborateurs pour lesquels CETTE
+  // personne est autorisée à saisir les heures (en plus des siennes). Vide ou
+  // absent = aucune délégation. Défini par l'admin (Administration →
+  // Collaborateurs). MIGRATION : les données historiques sans ce champ sont
+  // interprétées comme une liste vide.
+  peutSaisirPour?: string[]
 }
 
 // Compte de connexion (auth mockée)

@@ -109,6 +109,9 @@ export const collaborateursSeed: Collaborateur[] = [
       // Ancienneté longue → illustre le palier le plus élevé (≥ 20 ans).
       dateDebut: '2005-03-01',
     },
+    // Délégation de démo : Jean est autorisé à saisir les heures de Luc Bonnet
+    // (même famille Vignes). Illustre l'écran « Saisie pour un collègue ».
+    peutSaisirPour: ['col-luc'],
   },
   {
     id: 'col-amelie',

@@ -62,6 +62,10 @@ interface DataState {
 
   saveCollaborateur: (collaborateur: Collaborateur) => void
 
+  // Délégation de saisie : remplace la liste des collaborateurs pour lesquels
+  // `collaborateurId` est autorisé à saisir, puis resynchronise l'état.
+  setDelegationsSaisie: (collaborateurId: string, ciblesIds: string[]) => void
+
   // Import de collaborateurs (Assistant d'import) — matérialise les lignes
   // valides puis resynchronise collaborateurs / comptes / soldes.
   importerCollaborateurs: (rows: ImportCollaborateurRow[]) => ImportResult
@@ -182,6 +186,11 @@ export const useDataStore = create<DataState>((set, get) => {
 
     saveCollaborateur: (collaborateur) => {
       repository.saveCollaborateur(collaborateur)
+      set({ collaborateurs: repository.getCollaborateurs() })
+    },
+
+    setDelegationsSaisie: (collaborateurId, ciblesIds) => {
+      repository.setDelegationsSaisie(collaborateurId, ciblesIds)
       set({ collaborateurs: repository.getCollaborateurs() })
     },
 

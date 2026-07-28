@@ -60,12 +60,26 @@ returns boolean language sql stable security definer set search_path = public as
   )
 $$;
 
+-- L'utilisateur courant a-t-il reçu DÉLÉGATION pour saisir les heures de `cid` ?
+-- Vrai si une ligne `delegations_saisie` relie SON collaborateur (delegant) à la
+-- cible `cid`. Renvoie faux pour un responsable (collaborateur_id NULL). C'EST
+-- la décision d'autorisation de la saisie déléguée, prise côté base.
+create or replace function public.auth_peut_saisir_pour(cid uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.delegations_saisie d
+    where d.cible_collaborateur_id = cid
+      and d.delegant_collaborateur_id = public.auth_collaborateur_id()
+  )
+$$;
+
 -- --------------------------------------------------------- Activation RLS -----
 alter table public.profiles          enable row level security;
 alter table public.familles          enable row level security;
 alter table public.modeles_contrat   enable row level security;
 alter table public.collaborateurs    enable row level security;
 alter table public.contrats          enable row level security;
+alter table public.delegations_saisie enable row level security;
 alter table public.saisies           enable row level security;
 alter table public.conges            enable row level security;
 alter table public.soldes            enable row level security;
@@ -142,7 +156,11 @@ create policy regles_write on public.regles_generales for all to authenticated
 -- L'employé lit SON collaborateur ; le responsable lit/écrit son périmètre.
 drop policy if exists collaborateurs_select on public.collaborateurs;
 create policy collaborateurs_select on public.collaborateurs for select to authenticated
-  using (id = public.auth_collaborateur_id() or public.responsable_sees_collaborateur(id));
+  using (
+    id = public.auth_collaborateur_id()
+    or public.auth_peut_saisir_pour(id)          -- collègues délégués (dropdown de saisie)
+    or public.responsable_sees_collaborateur(id)
+  );
 
 drop policy if exists collaborateurs_insert on public.collaborateurs;
 create policy collaborateurs_insert on public.collaborateurs for insert to authenticated
@@ -162,6 +180,7 @@ drop policy if exists contrats_select on public.contrats;
 create policy contrats_select on public.contrats for select to authenticated
   using (
     collaborateur_id = public.auth_collaborateur_id()
+    or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 drop policy if exists contrats_write on public.contrats;
@@ -169,12 +188,42 @@ create policy contrats_write on public.contrats for all to authenticated
   using (public.responsable_sees_collaborateur(collaborateur_id))
   with check (public.responsable_sees_collaborateur(collaborateur_id));
 
+-- =========================== delegations_saisie =============================
+-- Lecture : le délégant lit SES délégations (pour peupler le dropdown de saisie
+-- déléguée) ; le responsable lit celles de son périmètre. Écriture (définition
+-- de la liste) : responsable UNIQUEMENT, et seulement pour des collaborateurs
+-- (délégant + cible) de son périmètre. Un employé ne s'auto-attribue JAMAIS une
+-- délégation.
+drop policy if exists delegations_select on public.delegations_saisie;
+create policy delegations_select on public.delegations_saisie for select to authenticated
+  using (
+    delegant_collaborateur_id = public.auth_collaborateur_id()
+    or public.responsable_sees_collaborateur(delegant_collaborateur_id)
+    or public.responsable_sees_collaborateur(cible_collaborateur_id)
+  );
+
+drop policy if exists delegations_write on public.delegations_saisie;
+create policy delegations_write on public.delegations_saisie for all to authenticated
+  using (
+    public.responsable_sees_collaborateur(delegant_collaborateur_id)
+    and public.responsable_sees_collaborateur(cible_collaborateur_id)
+  )
+  with check (
+    public.responsable_sees_collaborateur(delegant_collaborateur_id)
+    and public.responsable_sees_collaborateur(cible_collaborateur_id)
+  );
+
 -- ================================= saisies ===================================
 -- L'employé gère SES saisies ; le responsable gère celles de son périmètre.
+-- DÉLÉGATION : un employé peut lire/insérer/mettre à jour une saisie dont le
+-- `collaborateur_id` est le sien OU ∈ ses délégations (`auth_peut_saisir_pour`).
+-- La SUPPRESSION reste réservée au propriétaire ou au responsable (une
+-- délégation autorise la saisie, pas l'effacement des données d'un collègue).
 drop policy if exists saisies_select on public.saisies;
 create policy saisies_select on public.saisies for select to authenticated
   using (
     collaborateur_id = public.auth_collaborateur_id()
+    or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 
@@ -182,6 +231,7 @@ drop policy if exists saisies_insert on public.saisies;
 create policy saisies_insert on public.saisies for insert to authenticated
   with check (
     collaborateur_id = public.auth_collaborateur_id()
+    or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 
@@ -189,10 +239,12 @@ drop policy if exists saisies_update on public.saisies;
 create policy saisies_update on public.saisies for update to authenticated
   using (
     collaborateur_id = public.auth_collaborateur_id()
+    or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   )
   with check (
     collaborateur_id = public.auth_collaborateur_id()
+    or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 

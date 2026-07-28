@@ -45,8 +45,19 @@ export interface Repository {
   deleteModele(id: string): void
 
   // Collaborateurs
+  // `getCollaborateurs` renvoie chaque collaborateur AVEC sa liste de délégation
+  // de saisie (`peutSaisirPour`). `saveCollaborateur` persiste également cette
+  // liste (voir aussi `setDelegationsSaisie`).
   getCollaborateurs(): Collaborateur[]
   saveCollaborateur(collaborateur: Collaborateur): void
+
+  // Délégation de saisie pour autrui
+  // SUPABASE SWAP POINT
+  // Matérialisée par la table `delegations_saisie(delegant, cible)` (voir
+  // supabase/schema.sql). Définit la liste des collaborateurs (`ciblesIds`) pour
+  // lesquels `collaborateurId` peut saisir. Remplace intégralement la liste
+  // existante. La DÉCISION d'autorisation d'écriture est prise côté base (RLS).
+  setDelegationsSaisie(collaborateurId: string, ciblesIds: string[]): void
 
   // Import de collaborateurs (Assistant d'import)
   // SUPABASE SWAP POINT

@@ -10,9 +10,16 @@ export default function Layout() {
   const logout = useAuthStore((s) => s.logout)
   const saisies = useDataStore((s) => s.saisies)
   const conges = useDataStore((s) => s.conges)
+  const collaborateurs = useDataStore((s) => s.collaborateurs)
   const navigate = useNavigate()
 
   const isResponsable = session?.role === 'responsable'
+  // Employé délégué : a-t-il au moins un collègue à saisir (liste définie par
+  // l'admin) ? Conditionne l'entrée de menu « Saisie pour un collègue ».
+  const peutSaisirPourCollegue =
+    !isResponsable &&
+    (collaborateurs.find((c) => c.id === session?.collaborateurId)?.peutSaisirPour
+      ?.length ?? 0) > 0
   const nbEnAttente = saisies.filter((s) => s.statut === 'en_attente').length
   const nbCongesDemandes = conges.filter((c) => c.statut === 'demandee').length
 
@@ -42,6 +49,9 @@ export default function Layout() {
               Tableau de bord
             </NavLink>
             <NavLink to="/saisie">Saisie</NavLink>
+            {peutSaisirPourCollegue && (
+              <NavLink to="/saisie-collegue">Saisie pour un collègue</NavLink>
+            )}
             <NavLink to="/historique">Historique</NavLink>
             <NavLink to="/conges">Mes congés</NavLink>
           </>

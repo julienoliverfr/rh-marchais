@@ -98,6 +98,11 @@ interface ContratRow {
   date_debut: string | null
 }
 
+interface DelegationRow {
+  delegant_collaborateur_id: string
+  cible_collaborateur_id: string
+}
+
 interface SaisieRow {
   id: string
   collaborateur_id: string
@@ -490,6 +495,9 @@ export class SupabaseRepository implements Repository {
   private modeles: ModeleContrat[] = []
   private collaborateurs: Collaborateur[] = []
   private saisies: Saisie[] = []
+  // Délégations de saisie : delegant_collaborateur_id -> [cible_collaborateur_id].
+  // Reconstruit à chaque init ; sert à peupler `peutSaisirPour` des collaborateurs.
+  private delegations: DelegationRow[] = []
   private conges: Conge[] = []
   private soldes: SoldeConge[] = []
   private typesAbsence: TypeAbsence[] = []
@@ -527,6 +535,7 @@ export class SupabaseRepository implements Repository {
       modeles,
       collaborateurs,
       contrats,
+      delegations,
       saisies,
       conges,
       soldes,
@@ -541,6 +550,7 @@ export class SupabaseRepository implements Repository {
       this.selectAll<ModeleRow>('modeles_contrat'),
       this.selectAll<CollaborateurRow>('collaborateurs'),
       this.selectAll<ContratRow>('contrats'),
+      this.selectAll<DelegationRow>('delegations_saisie'),
       this.selectAll<SaisieRow>('saisies'),
       this.selectAll<CongeRow>('conges'),
       this.selectAll<SoldeRow>('soldes'),
@@ -555,6 +565,15 @@ export class SupabaseRepository implements Repository {
     this.familles = familles.map(familleFromRow)
     this.modeles = modeles.map(modeleFromRow)
 
+    // Délégations : delegant -> liste de cibles (peuple `peutSaisirPour`).
+    this.delegations = delegations
+    const ciblesParDelegant = new Map<string, string[]>()
+    for (const d of delegations) {
+      const arr = ciblesParDelegant.get(d.delegant_collaborateur_id) ?? []
+      arr.push(d.cible_collaborateur_id)
+      ciblesParDelegant.set(d.delegant_collaborateur_id, arr)
+    }
+
     const contratByCollab = new Map<string, Contrat>()
     for (const c of contrats) contratByCollab.set(c.collaborateur_id, contratFromRow(c))
     this.collaborateurs = collaborateurs.map((r) => ({
@@ -562,6 +581,7 @@ export class SupabaseRepository implements Repository {
       prenom: r.prenom,
       nom: r.nom,
       familleId: r.famille_id,
+      peutSaisirPour: ciblesParDelegant.get(r.id) ?? [],
       contrat:
         contratByCollab.get(r.id) ??
         // Contrat manquant (donnée incomplète) : repli neutre pour ne pas casser l'UI.
@@ -672,8 +692,12 @@ export class SupabaseRepository implements Repository {
 
   saveCollaborateur(collaborateur: Collaborateur): void {
     const idx = this.collaborateurs.findIndex((c) => c.id === collaborateur.id)
-    if (idx >= 0) this.collaborateurs[idx] = collaborateur
-    else this.collaborateurs.push(collaborateur)
+    const normalise: Collaborateur = {
+      ...collaborateur,
+      peutSaisirPour: collaborateur.peutSaisirPour ?? [],
+    }
+    if (idx >= 0) this.collaborateurs[idx] = normalise
+    else this.collaborateurs.push(normalise)
     // Collaborateur + son contrat (table 1:1) écrits ensemble.
     this.upsert(
       'collaborateurs',
@@ -691,6 +715,55 @@ export class SupabaseRepository implements Repository {
       'enregistrement contrat',
       'collaborateur_id',
     )
+    // La liste de délégation n'est synchronisée QUE lorsqu'elle est explicitement
+    // fournie (les imports la laissent indéfinie → aucun write inutile).
+    if (collaborateur.peutSaisirPour !== undefined) {
+      this.syncDelegations(collaborateur.id, collaborateur.peutSaisirPour)
+    }
+  }
+
+  // Remplace la liste de délégation d'un délégant (cache + write-through). La
+  // décision d'autorisation est prise côté base (RLS : responsable uniquement).
+  setDelegationsSaisie(collaborateurId: string, ciblesIds: string[]): void {
+    const idx = this.collaborateurs.findIndex((c) => c.id === collaborateurId)
+    if (idx >= 0) {
+      this.collaborateurs[idx] = {
+        ...this.collaborateurs[idx],
+        peutSaisirPour: ciblesIds.filter((id) => id !== collaborateurId),
+      }
+    }
+    this.syncDelegations(collaborateurId, ciblesIds)
+  }
+
+  // Réécrit intégralement les lignes `delegations_saisie` d'un délégant : purge
+  // puis insertion des cibles (auto-référence exclue). Met à jour le cache.
+  private syncDelegations(delegantId: string, ciblesIds: string[]): void {
+    const cibles = Array.from(new Set(ciblesIds.filter((id) => id !== delegantId)))
+    this.delegations = [
+      ...this.delegations.filter((d) => d.delegant_collaborateur_id !== delegantId),
+      ...cibles.map((cible) => ({
+        delegant_collaborateur_id: delegantId,
+        cible_collaborateur_id: cible,
+      })),
+    ]
+    this.track(
+      this.sb
+        .from('delegations_saisie')
+        .delete()
+        .eq('delegant_collaborateur_id', delegantId),
+      'purge délégations saisie',
+    )
+    if (cibles.length > 0) {
+      this.upsert(
+        'delegations_saisie',
+        cibles.map((cible) => ({
+          delegant_collaborateur_id: delegantId,
+          cible_collaborateur_id: cible,
+        })),
+        'enregistrement délégations saisie',
+        'delegant_collaborateur_id,cible_collaborateur_id',
+      )
+    }
   }
 
   // -------------------- Import de collaborateurs (assistant) -----------------
