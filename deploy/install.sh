@@ -114,6 +114,23 @@ docker run -d --restart always --name rh-front \
   -v "$APP_DIR/deploy/Caddyfile":/etc/caddy/Caddyfile \
   caddy:2 >/dev/null
 
+log "[+] Mise à jour automatique (vérifie le dépôt toutes les 3 min et reconstruit si besoin)"
+cat > /opt/rh-update.sh <<'UPD'
+#!/bin/bash
+export PATH=/usr/local/bin:/usr/bin:/bin
+cd /opt/rh-marchais || exit 0
+git fetch -q origin main || exit 0
+[ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] && exit 0
+git reset --hard -q origin/main
+ANON=$(grep '^ANON_KEY=' /opt/supabase/.env | cut -d= -f2-)
+IP=$(curl -fsS https://api.ipify.org)
+npm ci >/dev/null 2>&1
+VITE_SUPABASE_URL="http://$IP:8000" VITE_SUPABASE_ANON_KEY="$ANON" npm run build
+echo "$(date) — application mise a jour"
+UPD
+chmod +x /opt/rh-update.sh
+( crontab -l 2>/dev/null | grep -v 'rh-update.sh' ; echo "*/3 * * * * /opt/rh-update.sh >> /var/log/rh-update.log 2>&1" ) | crontab -
+
 # Récapitulatif
 cat <<EOF
 

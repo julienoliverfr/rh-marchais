@@ -98,21 +98,6 @@ export default function Login() {
             {submitting ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
-
-        <div className="demo-accounts">
-          <strong>Comptes de démo :</strong>
-          <ul>
-            <li>
-              <code>jean</code> / <code>demo</code> — employé (Vignes)
-            </li>
-            <li>
-              <code>amelie</code> / <code>demo</code> — employé (Marchais)
-            </li>
-            <li>
-              <code>sophie</code> / <code>demo</code> — responsable-admin
-            </li>
-          </ul>
-        </div>
       </div>
 
       {/* Aide contextuelle disponible dès l'écran de connexion. */}
