@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ToastProvider } from './components/Toast'
+import AppErrorBridge from './components/AppErrorBridge'
 import { ConfirmProvider } from './components/ConfirmDialog'
 import Login from './pages/Login'
 import Aide from './pages/Aide'
@@ -27,6 +28,7 @@ import ImportCollaborateurs from './pages/responsable/admin/ImportCollaborateurs
 export default function App() {
   return (
     <ToastProvider>
+      <AppErrorBridge />
       <ConfirmProvider>
         <BrowserRouter>
           <Routes>

@@ -8,17 +8,19 @@ change.**
 
 ## Fichiers
 
-| Fichier      | Rôle                                                            |
-| ------------ | --------------------------------------------------------------- |
-| `schema.sql` | Tables (structure) reflétant `src/types.ts`.                    |
-| `rls.sql`    | **Sécurité** : active RLS + policies (qui lit/écrit quoi).      |
-| `seed.sql`   | Données **fictives** de démo (familles, contrats, saisies…).    |
+| Fichier         | Rôle                                                                        |
+| --------------- | --------------------------------------------------------------------------- |
+| `schema.sql`    | Tables (structure) reflétant `src/types.ts`.                                |
+| `rls.sql`       | **Sécurité** : active RLS + policies (qui lit/écrit quoi).                   |
+| `functions.sql` | Fonctions admin `SECURITY DEFINER` (création/suppression de comptes en RPC).|
+| `seed.sql`      | Données **fictives** de démo (familles, contrats, saisies…).                |
 
 ## Ordre d'exécution (obligatoire)
 
-1. `schema.sql`  → crée les tables.
-2. `rls.sql`     → active la sécurité (Row Level Security) + fonctions d'autorisation.
-3. `seed.sql`    → insère les données fictives et les profils de démo.
+1. `schema.sql`    → crée les tables.
+2. `rls.sql`       → active la sécurité (Row Level Security) + fonctions d'autorisation.
+3. `functions.sql` → fonctions admin (dépendent de `is_responsable()` de `rls.sql`).
+4. `seed.sql`      → insère les données fictives et les profils de démo.
 
 Exécution possible via **Dashboard Supabase > SQL Editor** (coller/exécuter
 chaque fichier dans l'ordre) ou via la CLI `supabase db` / `psql`.
@@ -76,6 +78,15 @@ sans jamais confier l'autorisation au client.
   mémoire toutes les lignes autorisées (RLS). Les lectures sont servies depuis ce
   cache (synchrones, UI inchangée) ; les écritures mettent à jour le cache
   immédiatement puis sont poussées vers Supabase en arrière-plan.
-- **Comptes / import** : la création d'utilisateurs Auth (mots de passe, invitations)
-  est une opération **serveur** (clé de service / fonction admin), volontairement
-  hors du client. Voir les `// TODO runtime` dans `SupabaseRepository.ts`.
+- **Comptes** : la création/suppression d'utilisateurs Auth est une opération
+  **privilégiée**. Elle n'utilise PAS la clé de service côté client : elle passe
+  par les fonctions SQL `SECURITY DEFINER` `admin_create_login` /
+  `admin_delete_login` (`functions.sql`), appelées via `supabase.rpc(...)` et
+  protégées par une garde « responsable uniquement » côté base. En cas d'échec,
+  aucun compte n'est ajouté au cache et l'UI reçoit un message d'erreur clair
+  (plus de « compte fantôme » qui apparaît puis disparaît).
+- **Import de collaborateurs** : la création des comptes de connexion lors de
+  l'import (`importerCollaborateurs`) reste **hors périmètre** pour l'instant —
+  l'import crée collaborateurs + contrats + soldes, mais pas encore les comptes
+  Auth. À brancher plus tard sur la même fonction `admin_create_login`. L'import
+  actuel n'est pas cassé.

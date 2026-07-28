@@ -513,6 +513,10 @@ export class SupabaseRepository implements Repository {
   // Remontée d'erreur des écritures write-through (branchable par l'UI).
   public onError: ((contexte: string, error: unknown) => void) | null = null
 
+  // Notifie l'UI qu'un cache a changé de façon ASYNCHRONE (résultat d'une RPC
+  // par exemple) : le store applicatif s'y branche pour se resynchroniser.
+  public onChange: (() => void) | null = null
+
   constructor(client: SupabaseClient) {
     this.sb = client
   }
@@ -633,6 +637,11 @@ export class SupabaseRepository implements Repository {
     // Journalisation maîtrisée + callback optionnel pour l'UI.
     console.error(`[Supabase] Échec ${contexte} :`, error)
     if (this.onError) this.onError(contexte, error)
+  }
+
+  // Signale à l'UI un changement de cache survenu en arrière-plan (RPC résolue).
+  private notifyChange(): void {
+    if (this.onChange) this.onChange()
   }
 
   private upsert(
@@ -833,30 +842,89 @@ export class SupabaseRepository implements Repository {
 
   saveCompte(compte: Compte): void {
     const idx = this.profiles.findIndex((c) => c.id === compte.id)
-    const clean: Compte = { ...compte, motDePasse: '' }
-    if (idx >= 0) this.profiles[idx] = clean
-    else this.profiles.push(clean)
-    // Met à jour le PROFIL (rôle / nom / rattachement). La création d'un nouvel
-    // utilisateur Auth (avec mot de passe) est une opération serveur (admin).
-    this.upsert(
-      'profiles',
-      {
-        id: compte.id,
-        identifiant: compte.identifiant,
-        role: compte.role,
-        collaborateur_id: compte.collaborateurId ?? null,
-        nom_affichage: compte.nomAffichage,
-      },
-      'enregistrement profil',
+    if (idx >= 0) {
+      // ÉDITION d'un compte EXISTANT : on met seulement à jour le PROFIL
+      // (rôle / nom / rattachement). Le mot de passe et l'utilisateur Auth ne
+      // sont pas touchés ici (opération séparée non gérée pour l'instant).
+      this.profiles[idx] = { ...compte, motDePasse: '' }
+      this.upsert(
+        'profiles',
+        {
+          id: compte.id,
+          identifiant: compte.identifiant,
+          role: compte.role,
+          collaborateur_id: compte.collaborateurId ?? null,
+          nom_affichage: compte.nomAffichage,
+        },
+        'enregistrement profil',
+      )
+      return
+    }
+    // CRÉATION : la création d'un utilisateur Auth est une opération PRIVILÉGIÉE
+    // déléguée à la fonction SQL SECURITY DEFINER `admin_create_login` (garde
+    // « responsable uniquement » côté base). On n'ajoute au cache QU'APRÈS
+    // succès : en cas d'échec, aucun « compte fantôme » ne subsiste et l'erreur
+    // est remontée à l'UI (onError) pour un message clair.
+    this.createLogin(compte)
+  }
+
+  // Appel RPC de création de compte. Succès -> ajoute le compte réel (avec l'UID
+  // renvoyé) au cache + notifie l'UI. Échec -> aucune écriture de cache, erreur
+  // remontée via le mécanisme habituel.
+  private createLogin(compte: Compte): void {
+    const login = compte.identifiant.trim().toLowerCase()
+    const email = login.includes('@') ? login : `${login}@demo.local`
+    // Promise.resolve : le builder Supabase est un PromiseLike (pas de `.catch`).
+    void Promise.resolve(
+      this.sb.rpc('admin_create_login', {
+        p_identifiant: compte.identifiant,
+        p_mot_de_passe: compte.motDePasse,
+        p_role: compte.role,
+        p_collaborateur_id: compte.collaborateurId ?? null,
+        p_nom_affichage: compte.nomAffichage,
+      }),
     )
+      .then(({ data, error }) => {
+        if (error) {
+          this.report('création du compte', error)
+          return
+        }
+        const uid = (data as string | null) ?? compte.id
+        const cree: Compte = {
+          ...compte,
+          id: uid,
+          identifiant: email,
+          motDePasse: '',
+        }
+        // Écarte un éventuel doublon puis ajoute le compte réellement créé.
+        this.profiles = this.profiles.filter((c) => c.id !== uid)
+        this.profiles.push(cree)
+        this.notifyChange()
+      })
+      .catch((e: unknown) => this.report('création du compte', e))
   }
 
   deleteCompte(id: string): void {
+    // La suppression de l'utilisateur Auth exige elle aussi un privilège : elle
+    // passe par la fonction SECURITY DEFINER `admin_delete_login` (responsable
+    // uniquement, auto-suppression interdite côté base). Retrait optimiste du
+    // cache ; restauration + remontée d'erreur si la RPC échoue.
+    const snapshot = this.profiles
     this.profiles = this.profiles.filter((c) => c.id !== id)
-    // La suppression du profil est possible ; la suppression de l'utilisateur
-    // Auth lui-même exige la clé de service (fonction admin serveur).
-    this.removeRow('profiles', 'id', id, 'suppression profil')
-    // TODO runtime : révoquer/supprimer l'utilisateur Supabase Auth côté serveur.
+    // Promise.resolve : le builder Supabase est un PromiseLike (pas de `.catch`).
+    void Promise.resolve(this.sb.rpc('admin_delete_login', { p_user_id: id }))
+      .then(({ error }) => {
+        if (error) {
+          this.profiles = snapshot
+          this.report('suppression du compte', error)
+          this.notifyChange()
+        }
+      })
+      .catch((e: unknown) => {
+        this.profiles = snapshot
+        this.report('suppression du compte', e)
+        this.notifyChange()
+      })
   }
 
   // --------------------------- Règles générales -----------------------------

@@ -89,6 +89,10 @@ done
 log "[7/9] Création du schéma, des règles de sécurité, puis des comptes de démo"
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/schema.sql"
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/rls.sql"
+# Fonctions admin SECURITY DEFINER (création/suppression de comptes via RPC).
+# À appliquer APRÈS rls.sql (elles dépendent de public.is_responsable()) et AVANT
+# la création des comptes de démo + le seed.
+docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/functions.sql"
 # Comptes d'authentification (fictifs)
 for pair in "jean@demo.local" "amelie@demo.local" "sophie@demo.local"; do
   echo "  - création de $pair"

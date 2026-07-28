@@ -3,6 +3,7 @@ import type { Session } from '../types'
 import { repository, supabaseRepository, isSupabaseMode } from '../repositories'
 import { supabase } from '../lib/supabaseClient'
 import { useDataStore } from './dataStore'
+import { emitAppError } from '../lib/errorBus'
 
 // SUPABASE SWAP POINT — SÉCURITÉ
 // ---------------------------------------------------------------------------
@@ -132,6 +133,24 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ session: null })
   },
 }))
+
+// --- Branchement des retours du repository (mode Supabase uniquement) --------
+// onChange : une écriture ASYNCHRONE (RPC) a modifié le cache -> resynchronise
+//            le store de données pour refléter le changement dans l'UI.
+// onError  : une écriture write-through / RPC a échoué -> message clair à l'UI
+//            (toast d'erreur) au lieu d'un état incohérent silencieux.
+if (isSupabaseMode() && supabaseRepository) {
+  supabaseRepository.onChange = () => useDataStore.getState().refresh()
+  supabaseRepository.onError = (contexte, error) => {
+    const raison =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : 'erreur inattendue'
+    emitAppError(`Échec ${contexte} : ${raison}`)
+  }
+}
 
 // --- Restauration de session au démarrage (mode Supabase uniquement) ---------
 // La librairie Supabase persiste le JWT : au rechargement de la page, on
