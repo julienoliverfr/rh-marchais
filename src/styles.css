@@ -285,11 +285,20 @@ input[type='radio'] {
   flex: none;
 }
 
-/* Champs date / heure : forcer l'alignement à gauche. iOS Safari centre par
-   défaut la valeur des inputs date/time, ce qui la décalait par rapport aux
-   autres champs (Pause, etc.) alignés à gauche. */
+/* Champs date / heure : forcer l'alignement à gauche.
+   iOS Safari centre la valeur par défaut ET affiche cette valeur dans un
+   pseudo-élément interne (::-webkit-date-and-time-value) qui IGNORE le
+   text-align posé sur l'input : il faut donc le cibler explicitement. */
 input[type='date'],
 input[type='time'] {
+  text-align: left;
+}
+input[type='date']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value {
+  text-align: left;
+}
+input[type='date']::-webkit-datetime-edit,
+input[type='time']::-webkit-datetime-edit {
   text-align: left;
 }
 
