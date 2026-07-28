@@ -153,6 +153,10 @@ create table if not exists public.conges (
   date_fin date not null,
   demi_jour text not null default 'aucune' check (demi_jour in ('aucune', 'debut', 'fin')),
   nb_jours numeric not null,
+  -- Valeur issue du CALCUL automatique, mémorisée si nb_jours a été ajusté à la
+  -- main par le responsable (NULL = aucun ajustement). L'ajustement est tracé
+  -- dans audit_log (action 'conge_jours_modifies').
+  nb_jours_calcule numeric,
   statut text not null check (statut in ('demandee', 'validee', 'refusee')),
   demande_par_user_id text not null,
   validee_par_user_id text,
@@ -243,7 +247,7 @@ create table if not exists public.audit_log (
   cible_id uuid not null,
   action text not null check (action in (
     'validee', 'refusee', 'debloquee', 'modifiee',
-    'demande_conge', 'conge_validee', 'conge_refusee', 'export'
+    'demande_conge', 'conge_validee', 'conge_refusee', 'conge_jours_modifies', 'export'
   )),
   par_user_id text not null,
   horodatage timestamptz not null default now(),

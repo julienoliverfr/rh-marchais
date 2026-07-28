@@ -154,6 +154,9 @@ export type AuditAction =
   | 'demande_conge'
   | 'conge_validee'
   | 'conge_refusee'
+  // Ajustement MANUEL du nombre de jours décompté (responsable). Toujours tracé :
+  // l'audit conserve l'ancienne valeur, la nouvelle et le motif.
+  | 'conge_jours_modifies'
   // Exports (Étape 4)
   | 'export'
 
@@ -195,7 +198,10 @@ export interface Conge {
   dateDebut: string // ISO yyyy-mm-dd
   dateFin: string // ISO yyyy-mm-dd
   demiJour: DemiJour
-  nbJours: number // calculé (jours ouvrés lun→ven, demi-journée = 0.5)
+  nbJours: number // jours décomptés (calculé, ou AJUSTÉ manuellement par le responsable)
+  // Valeur d'origine issue du CALCUL automatique, mémorisée uniquement lorsque
+  // `nbJours` a été ajusté à la main. Absente = aucun ajustement (nbJours = calcul).
+  nbJoursCalcule?: number
   statut: StatutConge
   demandeParUserId: string
   valideeParUserId?: string

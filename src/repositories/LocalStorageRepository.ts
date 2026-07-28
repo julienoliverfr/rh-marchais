@@ -708,6 +708,34 @@ export class LocalStorageRepository implements Repository {
     this.appendAudit('conge', id, 'conge_refusee', parUserId, motifClean)
   }
 
+  ajusterJoursConge(id: string, nbJours: number, parUserId: string, motif: string): void {
+    const motifClean = motif.trim()
+    if (!motifClean) throw new Error('Un motif est obligatoire pour ajuster les jours.')
+    if (!Number.isFinite(nbJours) || nbJours < 0) {
+      throw new Error('Nombre de jours invalide (positif ou nul attendu).')
+    }
+    const conge = this.requireConge(id)
+    if (conge.statut === 'refusee') {
+      throw new Error('Impossible d’ajuster une demande refusée.')
+    }
+    const ancien = conge.nbJours
+    // `nbJoursCalcule` mémorise la valeur AUTOMATIQUE d'origine : on ne l'écrase
+    // pas lors d'un 2e ajustement (elle doit rester la référence du calcul).
+    const maj: Conge = {
+      ...conge,
+      nbJours,
+      nbJoursCalcule: conge.nbJoursCalcule ?? ancien,
+    }
+    this.saveConge(maj)
+    this.appendAudit(
+      'conge',
+      id,
+      'conge_jours_modifies',
+      parUserId,
+      `${ancien} j → ${nbJours} j — ${motifClean}`,
+    )
+  }
+
   // ---------- Politiques de congés PAR TYPE à solde ----------
 
   // Map brute des politiques (migrée au démarrage via migrate()).

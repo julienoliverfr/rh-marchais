@@ -100,6 +100,13 @@ interface DataState {
   creerDemandeConge: (data: DemandeCongeInput) => ActionResult
   validerConge: (id: string, parUserId: string) => ActionResult
   refuserConge: (id: string, parUserId: string, motif: string) => ActionResult
+  // Ajustement manuel du nombre de jours décompté (tracé dans l'audit).
+  ajusterJoursConge: (
+    id: string,
+    nbJours: number,
+    parUserId: string,
+    motif: string,
+  ) => ActionResult
   setAllocation: (
     collaborateurId: string,
     typeId: CongeType,
@@ -308,6 +315,9 @@ export const useDataStore = create<DataState>((set, get) => {
 
     refuserConge: (id, parUserId, motif) =>
       run(() => repository.refuserConge(id, parUserId, motif)),
+
+    ajusterJoursConge: (id, nbJours, parUserId, motif) =>
+      run(() => repository.ajusterJoursConge(id, nbJours, parUserId, motif)),
 
     setAllocation: (collaborateurId, typeId, periodeLabel, acquis) => {
       repository.setAllocation(collaborateurId, typeId, periodeLabel, acquis)

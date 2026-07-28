@@ -27,6 +27,7 @@ export default function Conges() {
   const getSolde = useDataStore((s) => s.getSolde)
   const validerConge = useDataStore((s) => s.validerConge)
   const refuserConge = useDataStore((s) => s.refuserConge)
+  const ajusterJoursConge = useDataStore((s) => s.ajusterJoursConge)
   const setAllocation = useDataStore((s) => s.setAllocation)
   const toast = useToast()
 
@@ -34,6 +35,11 @@ export default function Conges() {
   const [motif, setMotif] = useState('')
   const [refusError, setRefusError] = useState<string | null>(null)
   const [allocDraft, setAllocDraft] = useState<Record<string, string>>({})
+  // Ajustement manuel du nombre de jours (id du congé en cours d'ajustement).
+  const [ajustId, setAjustId] = useState<string | null>(null)
+  const [ajustJours, setAjustJours] = useState('')
+  const [ajustMotif, setAjustMotif] = useState('')
+  const [ajustError, setAjustError] = useState<string | null>(null)
 
   // Types à solde disponibles (sélecteur de la section « Soldes »).
   const typesSolde = useMemo(
@@ -120,6 +126,35 @@ export default function Conges() {
     }
   }
 
+  // Ouvre le formulaire d'ajustement pré-rempli avec la valeur courante.
+  function startAjust(c: Conge) {
+    setAjustId(c.id)
+    setAjustJours(String(c.nbJours))
+    setAjustMotif('')
+    setAjustError(null)
+  }
+
+  function confirmAjust() {
+    if (!ajustId) return
+    const val = Number(ajustJours.replace(',', '.'))
+    if (ajustJours.trim() === '' || Number.isNaN(val) || val < 0) {
+      setAjustError('Nombre de jours invalide (positif ou nul).')
+      return
+    }
+    if (!ajustMotif.trim()) {
+      setAjustError('Le motif est obligatoire (il est enregistré dans le journal).')
+      return
+    }
+    const res = ajusterJoursConge(ajustId, val, parUser, ajustMotif)
+    if (res.ok) {
+      setAjustId(null)
+      setAjustError(null)
+      toast.success('Nombre de jours ajusté (tracé dans le journal).')
+    } else {
+      setAjustError(res.error ?? 'Ajustement impossible.')
+    }
+  }
+
   // Allocation = override manuel de l'acquis pour le TYPE + la période sélectionnés.
   function handleAllocation(collaborateurId: string) {
     const raw = allocDraft[collaborateurId]
@@ -187,7 +222,18 @@ export default function Conges() {
       sortable: true,
       sortType: 'number',
       sortAccessor: (c) => c.nbJours,
-      render: (c) => c.nbJours,
+      // Un congé ajusté à la main affiche la valeur d'origine (calcul auto).
+      render: (c) =>
+        c.nbJoursCalcule != null && c.nbJoursCalcule !== c.nbJours ? (
+          <>
+            {c.nbJours}{' '}
+            <span className="badge en_attente" title={`Calcul automatique : ${c.nbJoursCalcule} j`}>
+              ajusté
+            </span>
+          </>
+        ) : (
+          c.nbJours
+        ),
     },
     {
       key: 'restant',
@@ -222,7 +268,61 @@ export default function Conges() {
             >
               Refuser
             </button>
+            <button className="btn secondary small" onClick={() => startAjust(c)}>
+              Ajuster les jours
+            </button>
           </div>
+          {ajustId === c.id && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <div className="form-grid">
+                <div className="form-row">
+                  <label htmlFor={`ajust-j-${c.id}`}>
+                    Jours décomptés
+                    {c.nbJoursCalcule != null && ` (calcul : ${c.nbJoursCalcule} j)`}
+                  </label>
+                  <input
+                    id={`ajust-j-${c.id}`}
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    autoFocus
+                    value={ajustJours}
+                    onChange={(e) => {
+                      setAjustJours(e.target.value)
+                      if (ajustError) setAjustError(null)
+                    }}
+                  />
+                </div>
+                <div className="form-row">
+                  <label htmlFor={`ajust-m-${c.id}`}>Motif (obligatoire)</label>
+                  <input
+                    id={`ajust-m-${c.id}`}
+                    placeholder="Ex. samedi non décompté (accord)"
+                    value={ajustMotif}
+                    onChange={(e) => {
+                      setAjustMotif(e.target.value)
+                      if (ajustError) setAjustError(null)
+                    }}
+                  />
+                </div>
+              </div>
+              <FieldError id={`ajust-conge-err-${c.id}`} message={ajustError} />
+              <div className="btn-row" style={{ marginTop: '0.4rem' }}>
+                <button className="btn small" onClick={confirmAjust}>
+                  Enregistrer l'ajustement
+                </button>
+                <button
+                  className="btn secondary small"
+                  onClick={() => {
+                    setAjustId(null)
+                    setAjustError(null)
+                  }}
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
           {refusId === c.id && (
             <div style={{ marginTop: '0.5rem' }}>
               <input

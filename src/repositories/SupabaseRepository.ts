@@ -142,6 +142,7 @@ interface CongeRow {
   date_fin: string
   demi_jour: Conge['demiJour']
   nb_jours: number
+  nb_jours_calcule: number | null
   statut: StatutConge
   demande_par_user_id: string
   validee_par_user_id: string | null
@@ -358,6 +359,7 @@ function congeFromRow(r: CongeRow): Conge {
     dateFin: r.date_fin,
     demiJour: r.demi_jour,
     nbJours: Number(r.nb_jours),
+    nbJoursCalcule: r.nb_jours_calcule == null ? undefined : Number(r.nb_jours_calcule),
     statut: r.statut,
     demandeParUserId: r.demande_par_user_id,
     valideeParUserId: r.validee_par_user_id ?? undefined,
@@ -375,6 +377,7 @@ function congeToRow(c: Conge): CongeRow {
     date_fin: c.dateFin,
     demi_jour: c.demiJour,
     nb_jours: c.nbJours,
+    nb_jours_calcule: c.nbJoursCalcule ?? null,
     statut: c.statut,
     demande_par_user_id: c.demandeParUserId,
     validee_par_user_id: c.valideeParUserId ?? null,
@@ -1266,6 +1269,32 @@ export class SupabaseRepository implements Repository {
       valideeParUserId: undefined,
     })
     this.appendAudit('conge', id, 'conge_refusee', parUserId, motifClean)
+  }
+
+  ajusterJoursConge(id: string, nbJours: number, parUserId: string, motif: string): void {
+    const motifClean = motif.trim()
+    if (!motifClean) throw new Error('Un motif est obligatoire pour ajuster les jours.')
+    if (!Number.isFinite(nbJours) || nbJours < 0) {
+      throw new Error('Nombre de jours invalide (positif ou nul attendu).')
+    }
+    const conge = this.requireConge(id)
+    if (conge.statut === 'refusee') {
+      throw new Error('Impossible d’ajuster une demande refusée.')
+    }
+    const ancien = conge.nbJours
+    // `nbJoursCalcule` mémorise la valeur AUTOMATIQUE d'origine (jamais écrasée).
+    this.saveConge({
+      ...conge,
+      nbJours,
+      nbJoursCalcule: conge.nbJoursCalcule ?? ancien,
+    })
+    this.appendAudit(
+      'conge',
+      id,
+      'conge_jours_modifies',
+      parUserId,
+      `${ancien} j → ${nbJours} j — ${motifClean}`,
+    )
   }
 
   // ----------------------- Politiques de congés -----------------------------
