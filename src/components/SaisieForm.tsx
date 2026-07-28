@@ -22,8 +22,10 @@ interface Props {
 
 const MAX_DATE = todayISO()
 
+import { newId } from '../lib/id'
+
 function uid(): string {
-  return 'sai-' + Math.random().toString(36).slice(2, 10)
+  return newId()
 }
 
 // Formulaire de saisie adapté à la famille. Réutilisé par l'employé et le

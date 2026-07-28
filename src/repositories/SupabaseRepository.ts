@@ -43,6 +43,7 @@ import {
   periodePour,
 } from '../lib/soldes'
 import { REGLES_DEFAUT, typesAbsenceSeed } from './seed'
+import { newId } from '../lib/id'
 import type { Repository } from './Repository'
 
 // ---------------------------------------------------------------------------
@@ -213,7 +214,7 @@ interface ProfileRow {
 // -------------------------------- Utilitaires -------------------------------
 
 function uuid(): string {
-  return crypto.randomUUID()
+  return newId()
 }
 
 // -------------------------------- Mappers ----------------------------------

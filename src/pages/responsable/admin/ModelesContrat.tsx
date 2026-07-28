@@ -9,8 +9,10 @@ import FieldError from '../../../components/FieldError'
 import { useToast } from '../../../components/Toast'
 import { useConfirm } from '../../../components/ConfirmDialog'
 
+import { newId } from '../../../lib/id'
+
 function uid(): string {
-  return 'mod-' + Math.random().toString(36).slice(2, 10)
+  return newId()
 }
 
 const TYPE_LABELS: Record<TypeContrat, string> = {

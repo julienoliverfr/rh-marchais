@@ -9,8 +9,10 @@ import Breadcrumb from '../../components/Breadcrumb'
 import FieldError from '../../components/FieldError'
 import { useToast } from '../../components/Toast'
 
+import { newId } from '../../lib/id'
+
 function uid(): string {
-  return 'col-' + Math.random().toString(36).slice(2, 10)
+  return newId()
 }
 
 // Formulaire local d'édition/création d'un collaborateur.
