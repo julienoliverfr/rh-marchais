@@ -355,7 +355,11 @@ export default function Collaborateurs() {
             <p className="muted">Aucun autre collaborateur disponible.</p>
           ) : (
             <div className="form-row">
-              <div role="group" aria-label="Autorisé à saisir pour">
+              <div
+                className="delegation-list"
+                role="group"
+                aria-label="Autorisé à saisir pour"
+              >
                 {collaborateurs
                   .filter((c) => c.id !== draft.id)
                   .map((c) => (
