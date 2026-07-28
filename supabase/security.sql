@@ -154,11 +154,36 @@ returns trigger language plpgsql security definer set search_path = public as $$
 declare
   v_identifiant text;
 begin
-  select identifiant into v_identifiant from public.profiles where id = auth.uid();
-  new.par_user_id := coalesce(v_identifiant, auth.uid()::text);
-  new.horodatage  := now();  -- l'horodatage non plus n'est pas déclaratif
+  -- Uniquement pour un appel AUTHENTIFIÉ (le seul cas falsifiable). Une
+  -- insertion administrateur (script SQL, seed, maintenance) n'a pas de jeton :
+  -- on ne l'écrase pas, sinon `par_user_id` deviendrait NULL.
+  if auth.uid() is not null then
+    select identifiant into v_identifiant from public.profiles where id = auth.uid();
+    new.par_user_id := coalesce(v_identifiant, auth.uid()::text);
+    new.horodatage  := now();  -- l'horodatage non plus n'est pas déclaratif
+  end if;
   return new;
 end $$;
+
+-- APPEND-ONLY garanti par la base : une trace ne peut être ni modifiée ni
+-- supprimée (y compris via un upsert « INSERT … ON CONFLICT DO UPDATE »).
+-- Portée : les utilisateurs de l'APPLICATION (porteurs d'un jeton). Un
+-- administrateur de base (psql, maintenance, purge RGPD) reste souverain — de
+-- toute façon rien ne peut l'en empêcher, il pourrait désactiver le trigger.
+create or replace function public.audit_immuable()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is not null then
+    raise exception 'Le journal d''audit est immuable (ni modification ni suppression).'
+      using errcode = '42501';
+  end if;
+  return coalesce(new, old);
+end $$;
+
+drop trigger if exists trg_audit_immuable on public.audit_log;
+create trigger trg_audit_immuable
+  before update or delete on public.audit_log
+  for each row execute function public.audit_immuable();
 
 drop trigger if exists trg_audit_auteur on public.audit_log;
 create trigger trg_audit_auteur
