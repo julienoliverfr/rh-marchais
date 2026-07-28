@@ -71,6 +71,33 @@ AU=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API/rest/v1/audit_log" -H 
   -d "{\"id\":\"$X9\",\"cible_type\":\"conge\",\"cible_id\":\"$C1\",\"action\":\"demande_conge\",\"par_user_id\":\"jean@demo.local\"}")
 [ "$AU" != "201" ] && ok "audit refuse l'upsert (append-only, $AU)" || ko "audit accepte l'upsert (à écrire en INSERT !)"
 
+# 4c) SÉCURITÉ : jean ne doit PAS pouvoir se promouvoir responsable
+patch(){ curl -s -o /tmp/smoke_body.txt -w "%{http_code}" -X PATCH "$API/rest/v1/$1" \
+  -H "apikey: $ANON" -H "Authorization: Bearer $2" -H "Content-Type: application/json" -d "$3"; }
+JUID=$(psql "select id from public.profiles where identifiant='jean@demo.local'")
+patch "profiles?id=eq.$JUID" "$JEAN" '{"role":"responsable"}' >/dev/null
+ROLE_APRES=$(psql "select role from public.profiles where identifiant='jean@demo.local'")
+[ "$ROLE_APRES" = "employe" ] && ok "jean NE peut PAS se promouvoir responsable" \
+  || ko "FAILLE: jean est devenu $ROLE_APRES"
+
+# 4d) SÉCURITÉ : jean ne doit PAS pouvoir valider sa propre saisie
+patch "saisies?id=eq.$S1" "$JEAN" '{"statut":"validee"}' >/dev/null
+ST_APRES=$(psql "select statut from public.saisies where id='$S1'")
+[ "$ST_APRES" = "en_attente" ] && ok "jean NE peut PAS valider sa saisie (reste $ST_APRES)" \
+  || ko "FAILLE: saisie auto-validée ($ST_APRES)"
+
+# 4e) SÉCURITÉ : jean ne doit PAS pouvoir valider son propre congé
+patch "conges?id=eq.$C1" "$JEAN" '{"statut":"validee"}' >/dev/null
+CG_APRES=$(psql "select statut from public.conges where id='$C1'")
+[ "$CG_APRES" = "demandee" ] && ok "jean NE peut PAS valider son congé (reste $CG_APRES)" \
+  || ko "FAILLE: congé auto-validé ($CG_APRES)"
+
+# 4f) SÉCURITÉ : l'auteur de l'audit est imposé par la base (non falsifiable)
+post audit_log "$JEAN" "{\"id\":\"$X9\",\"cible_type\":\"conge\",\"cible_id\":\"$C1\",\"action\":\"demande_conge\",\"par_user_id\":\"sophie@demo.local\"}" >/dev/null
+AUTEUR=$(psql "select par_user_id from public.audit_log where id='$X9'")
+[ "$AUTEUR" = "jean@demo.local" ] && ok "audit : auteur impose par la base ($AUTEUR)" \
+  || ko "FAILLE: audit signe '$AUTEUR' au lieu de jean"
+
 # 5) NÉGATIF : jean ne doit PAS pouvoir saisir pour le collaborateur d'un autre
 NT=$(post saisies "$JEAN" "{\"id\":\"$X9\",\"collaborateur_id\":\"$AC\",\"date\":\"2026-07-20\",\"total_minutes\":100,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
 [ "$NT" != "201" ] && ok "jean NE peut PAS saisir pour autrui (rejet $NT)" || ko "FAILLE: jean a saisi pour autrui ($NT)"
