@@ -36,7 +36,8 @@ export const modelesSeed: ModeleContrat[] = [
     unite: 'heures',
     base: 35,
     seuilHebdo: 35,
-    congesSolde: 25,
+    // CP 25 j + RTT 10 j (exemple de quota par type au niveau du modèle).
+    quotasParType: { conge_paye: 25, rtt: 10 },
   },
   {
     id: 'mod-vignes-cdd',
@@ -45,7 +46,7 @@ export const modelesSeed: ModeleContrat[] = [
     unite: 'heures',
     base: 39,
     seuilHebdo: 39,
-    congesSolde: 12,
+    quotasParType: { conge_paye: 12 },
   },
   {
     id: 'mod-marchais-jour',
@@ -54,7 +55,7 @@ export const modelesSeed: ModeleContrat[] = [
     unite: 'jours',
     base: 7,
     seuilHebdo: 35,
-    congesSolde: 25,
+    quotasParType: { conge_paye: 25 },
   },
   {
     id: 'mod-saisonnier-jour',
@@ -63,7 +64,7 @@ export const modelesSeed: ModeleContrat[] = [
     unite: 'jours',
     base: 7,
     seuilHebdo: 35,
-    congesSolde: 8,
+    quotasParType: { conge_paye: 8 },
   },
 ]
 
@@ -105,7 +106,8 @@ export const collaborateursSeed: Collaborateur[] = [
       unite: 'heures',
       base: 35,
       seuilHebdo: 35,
-      congesSolde: 25,
+      // Hérité du modèle : CP 25 + RTT 10.
+      quotasParType: { conge_paye: 25, rtt: 10 },
       // Ancienneté longue → illustre le palier le plus élevé (≥ 20 ans).
       dateDebut: '2005-03-01',
     },
@@ -123,7 +125,7 @@ export const collaborateursSeed: Collaborateur[] = [
       unite: 'jours',
       base: 7,
       seuilHebdo: 35,
-      congesSolde: 25,
+      quotasParType: { conge_paye: 25 },
       // Ancienneté intermédiaire → premier palier d'ancienneté (≥ 10 ans).
       dateDebut: '2013-09-01',
     },
@@ -138,7 +140,7 @@ export const collaborateursSeed: Collaborateur[] = [
       unite: 'heures',
       base: 39,
       seuilHebdo: 39,
-      congesSolde: 12,
+      quotasParType: { conge_paye: 12 },
     },
   },
   {
@@ -151,7 +153,7 @@ export const collaborateursSeed: Collaborateur[] = [
       unite: 'jours',
       base: 7,
       seuilHebdo: 35,
-      congesSolde: 8,
+      quotasParType: { conge_paye: 8 },
       // Entrée en cours de période de référence → acquis proratisé (démo prorata).
       dateDebut: '2026-07-01',
     },

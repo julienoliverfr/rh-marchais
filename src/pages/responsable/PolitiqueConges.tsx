@@ -213,7 +213,7 @@ export default function PolitiqueCongesPage() {
           </div>
           {!estAnciennete && (
             <div className="form-row">
-              <label htmlFor="quota">Quota annuel (jours)</label>
+              <label htmlFor="quota">Quota par défaut (jours)</label>
               <input
                 id="quota"
                 type="number"
@@ -222,6 +222,10 @@ export default function PolitiqueCongesPage() {
                 value={draft.quotaAnnuel}
                 onChange={(e) => set('quotaAnnuel', Number(e.target.value))}
               />
+              <span className="muted" style={{ fontSize: '0.8rem' }}>
+                Repli utilisé quand le contrat (ou son modèle) ne précise pas de
+                quota pour ce type. Un quota défini sur le contrat prime.
+              </span>
             </div>
           )}
           {draft.modeAcquisition === 'mensuel' && (

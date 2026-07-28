@@ -48,7 +48,9 @@ create table if not exists public.modeles_contrat (
   unite text not null check (unite in ('heures', 'jours')),
   base numeric not null,
   seuil_hebdo numeric not null,
-  conges_solde numeric not null default 0,
+  -- Quotas de congés PAR TYPE à solde (jours/type), ex. {"conge_paye":25,"rtt":10}.
+  -- Un type absent = « quota par défaut de la politique ». Remplace conges_solde.
+  quotas_par_type jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -79,7 +81,9 @@ create table if not exists public.contrats (
   unite text not null check (unite in ('heures', 'jours')),
   base numeric not null,
   seuil_hebdo numeric not null,
-  conges_solde numeric not null default 0,
+  -- Quotas de congés PAR TYPE à solde (jours/type), pré-remplis depuis le modèle
+  -- et modifiables. Un type absent = « quota par défaut de la politique ».
+  quotas_par_type jsonb not null default '{}'::jsonb,
   date_debut date,
   updated_at timestamptz not null default now()
 );

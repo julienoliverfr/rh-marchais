@@ -31,7 +31,15 @@ export interface ModeleContrat {
   unite: UniteContrat
   base: number // base contractuelle (ex: 35 heures, ou 7 heures/jour)
   seuilHebdo: number // seuil hebdomadaire (en heures) au-delà duquel = heures sup
-  congesSolde: number // solde de congés seedé par défaut
+  // Quotas de congés donnés par ce modèle, PAR TYPE à solde (jours/type). Une
+  // entrée par type à acquisition forfait/mensuel (CP, RTT…). Un type ABSENT =
+  // « quota par défaut de la politique » (repli). L'ancienneté n'y figure pas :
+  // elle reste calculée par paliers. Voir lib/soldes.ts (source du quota).
+  quotasParType?: Partial<Record<CongeType, number>>
+  // Legacy (avant les quotas par type) : ancien solde CP unique. Conservé
+  // optionnel pour la MIGRATION ascendante (→ quotasParType.conge_paye). Ne plus
+  // écrire ; lire via quotasParTypeDe() de lib/conges.ts qui gère le repli.
+  congesSolde?: number
 }
 
 // Contrat rattaché à un collaborateur, pré-rempli depuis un modèle
@@ -40,7 +48,14 @@ export interface Contrat {
   unite: UniteContrat
   base: number
   seuilHebdo: number // en heures
-  congesSolde: number
+  // Quotas de congés PAR TYPE à solde de CE contrat (jours/type), pré-remplis
+  // depuis le modèle et modifiables. Un type ABSENT = « quota par défaut de la
+  // politique ». L'ancienneté n'y figure pas (calculée par paliers). C'est la
+  // source de quota prioritaire du moteur (lib/soldes.ts) : contrat sinon défaut.
+  quotasParType?: Partial<Record<CongeType, number>>
+  // Legacy : ancien solde CP unique. Optionnel pour la MIGRATION ascendante
+  // (→ quotasParType.conge_paye). Ne plus écrire ; lire via quotasParTypeDe().
+  congesSolde?: number
   // Date d'entrée du collaborateur (ISO yyyy-mm-dd). Optionnelle : si présente et
   // postérieure au début de la période de référence, elle proratise l'acquis
   // (voir PolitiqueConges.prorataEntree + lib/soldes.ts).

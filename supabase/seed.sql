@@ -25,11 +25,11 @@ insert into public.familles (id, nom, mode_saisie, pause_deduite_min) values
 on conflict (id) do nothing;
 
 -- ------------------------------------------------------------ modeles_contrat
-insert into public.modeles_contrat (id, nom, type_contrat, unite, base, seuil_hebdo, conges_solde) values
-  ('22222222-2222-2222-2222-222222222201', 'Vignes · CDI 35h',    'CDI',        'heures', 35, 35, 25),
-  ('22222222-2222-2222-2222-222222222202', 'Vignes · CDD saison', 'CDD',        'heures', 39, 39, 12),
-  ('22222222-2222-2222-2222-222222222203', 'Marchais · CDI jour', 'CDI',        'jours',   7, 35, 25),
-  ('22222222-2222-2222-2222-222222222204', 'Saisonnier · jour',   'saisonnier', 'jours',   7, 35,  8)
+insert into public.modeles_contrat (id, nom, type_contrat, unite, base, seuil_hebdo, quotas_par_type) values
+  ('22222222-2222-2222-2222-222222222201', 'Vignes · CDI 35h',    'CDI',        'heures', 35, 35, '{"conge_paye":25,"rtt":10}'::jsonb),
+  ('22222222-2222-2222-2222-222222222202', 'Vignes · CDD saison', 'CDD',        'heures', 39, 39, '{"conge_paye":12}'::jsonb),
+  ('22222222-2222-2222-2222-222222222203', 'Marchais · CDI jour', 'CDI',        'jours',   7, 35, '{"conge_paye":25}'::jsonb),
+  ('22222222-2222-2222-2222-222222222204', 'Saisonnier · jour',   'saisonnier', 'jours',   7, 35, '{"conge_paye":8}'::jsonb)
 on conflict (id) do nothing;
 
 -- -------------------------------------------------------------- types_absence
@@ -69,11 +69,11 @@ on conflict (id) do nothing;
 
 -- -------------------------------------------------------------------- contrats
 insert into public.contrats
-  (collaborateur_id, modele_id, unite, base, seuil_hebdo, conges_solde, date_debut) values
-  ('33333333-3333-3333-3333-333333333301', '22222222-2222-2222-2222-222222222201', 'heures', 35, 35, 25, '2005-03-01'),
-  ('33333333-3333-3333-3333-333333333302', '22222222-2222-2222-2222-222222222203', 'jours',   7, 35, 25, '2013-09-01'),
-  ('33333333-3333-3333-3333-333333333303', '22222222-2222-2222-2222-222222222202', 'heures', 39, 39, 12, null),
-  ('33333333-3333-3333-3333-333333333304', '22222222-2222-2222-2222-222222222204', 'jours',   7, 35,  8, '2026-07-01')
+  (collaborateur_id, modele_id, unite, base, seuil_hebdo, quotas_par_type, date_debut) values
+  ('33333333-3333-3333-3333-333333333301', '22222222-2222-2222-2222-222222222201', 'heures', 35, 35, '{"conge_paye":25,"rtt":10}'::jsonb, '2005-03-01'),
+  ('33333333-3333-3333-3333-333333333302', '22222222-2222-2222-2222-222222222203', 'jours',   7, 35, '{"conge_paye":25}'::jsonb, '2013-09-01'),
+  ('33333333-3333-3333-3333-333333333303', '22222222-2222-2222-2222-222222222202', 'heures', 39, 39, '{"conge_paye":12}'::jsonb, null),
+  ('33333333-3333-3333-3333-333333333304', '22222222-2222-2222-2222-222222222204', 'jours',   7, 35, '{"conge_paye":8}'::jsonb, '2026-07-01')
 on conflict (collaborateur_id) do nothing;
 
 -- ------------------------------------------------------------ delegations_saisie

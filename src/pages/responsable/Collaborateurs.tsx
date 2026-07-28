@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import type { Collaborateur } from '../../types'
+import { useMemo, useState } from 'react'
+import type { Collaborateur, CongeType } from '../../types'
 import { useDataStore } from '../../store/dataStore'
+import { quotasParTypeDe, typeASolde } from '../../lib/conges'
 import DataTable from '../../components/DataTable'
 import type { ColumnDef, FacetDef } from '../../components/DataTable'
 import { Link } from 'react-router-dom'
@@ -22,20 +23,56 @@ interface Draft {
   // contrat pré-rempli depuis le modèle, éditable
   base: number
   seuilHebdo: number
-  congesSolde: number
+  // Quotas de congés PAR TYPE (jours/type). Un type absent = défaut politique.
+  quotasParType: Partial<Record<CongeType, number>>
   // Liste des collaborateurs pour lesquels cette personne peut saisir.
   peutSaisirPour: string[]
+}
+
+// Libellés courts pour le résumé de la colonne « Congés » (« CP 25 · RTT 10 »).
+const SHORT_LABELS: Partial<Record<CongeType, string>> = {
+  conge_paye: 'CP',
+  rtt: 'RTT',
+  maladie: 'Mal.',
+  sans_solde: 'SS',
+  anciennete: 'Anc.',
+}
+
+function totalQuotas(q?: Partial<Record<CongeType, number>>): number {
+  if (!q) return 0
+  return Object.values(q).reduce((acc: number, v) => acc + (v ?? 0), 0)
+}
+
+function resumeQuotas(q?: Partial<Record<CongeType, number>>): string {
+  if (!q) return '—'
+  const parts = (Object.entries(q) as [CongeType, number | undefined][])
+    .filter(([, v]) => v != null)
+    .map(([code, v]) => `${SHORT_LABELS[code] ?? code} ${v}`)
+  return parts.length > 0 ? parts.join(' · ') : '—'
 }
 
 export default function Collaborateurs() {
   const collaborateurs = useDataStore((s) => s.collaborateurs)
   const familles = useDataStore((s) => s.familles)
   const modeles = useDataStore((s) => s.modeles)
+  const politiques = useDataStore((s) => s.politiques)
+  const typesAbsence = useDataStore((s) => s.typesAbsence)
   const saveCollaborateur = useDataStore((s) => s.saveCollaborateur)
   const toast = useToast()
 
   const [draft, setDraft] = useState<Draft | null>(null)
   const [errors, setErrors] = useState<{ prenom?: string; nom?: string }>({})
+
+  // Types à solde à quota saisissable (forfait/mensuel ; ancienneté exclue).
+  const typesQuota = useMemo(
+    () =>
+      typesAbsence.filter(
+        (t) =>
+          typeASolde(t) &&
+          (politiques[t.code]?.modeAcquisition ?? 'forfait') !== 'anciennete',
+      ),
+    [typesAbsence, politiques],
+  )
 
   function newDraft(): Draft {
     const m = modeles[0]
@@ -47,7 +84,8 @@ export default function Collaborateurs() {
       modeleId: m?.id ?? '',
       base: m?.base ?? 35,
       seuilHebdo: m?.seuilHebdo ?? 35,
-      congesSolde: m?.congesSolde ?? 25,
+      // Pré-rempli depuis le modèle (quotas par type).
+      quotasParType: m ? { ...quotasParTypeDe(m) } : {},
       peutSaisirPour: [],
     }
   }
@@ -61,9 +99,18 @@ export default function Collaborateurs() {
       modeleId: c.contrat.modeleId,
       base: c.contrat.base,
       seuilHebdo: c.contrat.seuilHebdo,
-      congesSolde: c.contrat.congesSolde,
+      quotasParType: { ...quotasParTypeDe(c.contrat) },
       peutSaisirPour: c.peutSaisirPour ?? [],
     }
+  }
+
+  // Met à jour (ou retire si vide) le quota d'un type dans le brouillon courant.
+  function setQuota(code: CongeType, raw: string) {
+    if (!draft) return
+    const q: Partial<Record<CongeType, number>> = { ...draft.quotasParType }
+    if (raw.trim() === '') delete q[code]
+    else q[code] = Number(raw)
+    setDraft({ ...draft, quotasParType: q })
   }
 
   // Ajoute/retire une cible de délégation dans le brouillon courant.
@@ -78,7 +125,7 @@ export default function Collaborateurs() {
     })
   }
 
-  // Le choix d'un modèle pré-remplit base / seuil / congés.
+  // Le choix d'un modèle pré-remplit base / seuil / quotas par type.
   function applyModele(modeleId: string) {
     if (!draft) return
     const m = modeles.find((x) => x.id === modeleId)
@@ -88,7 +135,7 @@ export default function Collaborateurs() {
       modeleId,
       base: m.base,
       seuilHebdo: m.seuilHebdo,
-      congesSolde: m.congesSolde,
+      quotasParType: { ...quotasParTypeDe(m) },
     })
   }
 
@@ -113,7 +160,7 @@ export default function Collaborateurs() {
         unite: m?.unite ?? 'heures',
         base: draft.base,
         seuilHebdo: draft.seuilHebdo,
-        congesSolde: draft.congesSolde,
+        quotasParType: draft.quotasParType,
       },
       // Auto-référence exclue par sécurité (on saisit déjà pour soi).
       peutSaisirPour: draft.peutSaisirPour.filter((id) => id !== draft.id),
@@ -174,8 +221,8 @@ export default function Collaborateurs() {
       align: 'right',
       sortable: true,
       sortType: 'number',
-      sortAccessor: (c) => c.contrat.congesSolde,
-      render: (c) => `${c.contrat.congesSolde} j`,
+      sortAccessor: (c) => totalQuotas(quotasParTypeDe(c.contrat)),
+      render: (c) => resumeQuotas(quotasParTypeDe(c.contrat)),
     },
     {
       key: 'delegation',
@@ -343,19 +390,32 @@ export default function Collaborateurs() {
                 }
               />
             </div>
-            <div className="form-row">
-              <label htmlFor="conges">Solde congés (j)</label>
-              <input
-                id="conges"
-                type="number"
-                min={0}
-                value={draft.congesSolde}
-                onChange={(e) =>
-                  setDraft({ ...draft, congesSolde: Number(e.target.value) })
-                }
-              />
-            </div>
           </div>
+
+          <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>
+            Congés (jours par type). Laisser vide = quota par défaut de la
+            politique. L'ancienneté est calculée automatiquement par paliers.
+          </p>
+          {typesQuota.length === 0 ? (
+            <p className="muted">Aucun type de congé à quota configuré.</p>
+          ) : (
+            <div className="form-grid">
+              {typesQuota.map((t) => (
+                <div className="form-row" key={t.code}>
+                  <label htmlFor={`quota-${t.code}`}>{t.label} (j)</label>
+                  <input
+                    id={`quota-${t.code}`}
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    placeholder="défaut"
+                    value={draft.quotasParType[t.code] ?? ''}
+                    onChange={(e) => setQuota(t.code, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.25rem' }}>
             Autorisé à saisir pour (délégation) :

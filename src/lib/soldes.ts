@@ -182,15 +182,23 @@ export function joursPalierAnciennete(
 }
 
 // Acquis "de la période" (hors report), selon le mode d'acquisition + prorata.
+//
+// `quotaOverride` (optionnel) : quota annuel PROPRE AU CONTRAT pour ce type
+// (contrat.quotasParType[type]). S'il est défini, il PRIME sur le quota par
+// défaut de la politique (politique.quotaAnnuel) — c'est la source « contrat
+// sinon défaut politique ». En mode mensuel, le taux mensuel effectif est dérivé
+// du quota override (override / 12). L'ancienneté (paliers) N'est PAS concernée.
 function acquisPeriode(
   contrat: Contrat,
   politique: PolitiqueConges,
   periode: PeriodeConges,
   dateRef: string,
+  quotaOverride?: number,
 ): number {
   const entree = contrat.dateDebut
 
   // Mode ancienneté : indépendant du prorata mensuel, piloté par les paliers.
+  // Le quota du contrat ne s'y applique pas (droit calculé par paliers).
   if (politique.modeAcquisition === 'anciennete') {
     if (!entree) return 0 // pas de date d'entrée → aucun droit (signalé en amont)
     // Entrée postérieure à la fin de période → pas encore présent sur la période.
@@ -205,17 +213,23 @@ function acquisPeriode(
   const prorata = politique.prorataEntree && !!entree && entree > periode.debut
   const eIndex = prorata ? indexMoisEntree(periode, entree as string) : 0
 
+  // Quota annuel effectif : celui du contrat s'il est défini, sinon la politique.
+  const quotaAnnuel = quotaOverride ?? politique.quotaAnnuel
+
   if (politique.modeAcquisition === 'forfait') {
     // Forfait : quota plein, éventuellement proratisé aux mois restants après
     // l'entrée (12 − index du mois d'entrée). Attribué en une fois.
     const moisRestants = 12 - eIndex
-    return arrondi((politique.quotaAnnuel * moisRestants) / 12)
+    return arrondi((quotaAnnuel * moisRestants) / 12)
   }
 
   // Mensuel : tauxMensuel × nb de mois travaillés écoulés jusqu'à dateRef.
   // Mois travaillés = mois écoulés dans la période − mois précédant l'entrée.
+  // Taux mensuel effectif dérivé du quota du contrat s'il est fourni.
+  const tauxMensuel =
+    quotaOverride != null ? arrondi(quotaOverride / 12) : politique.tauxMensuel
   const moisTravailles = Math.max(0, moisEcoules(periode, dateRef) - eIndex)
-  return arrondi(politique.tauxMensuel * moisTravailles)
+  return arrondi(tauxMensuel * moisTravailles)
 }
 
 // Somme des congés VALIDÉS (déjà filtrés sur le type par l'appelant) dont la
@@ -235,6 +249,9 @@ function prisSurPeriode(congesValidesDuType: Conge[], periode: PeriodeConges): n
 // - `niveauReport`  : garde-fou anti-récursion. 1 = on ajoute le report de la
 //   période précédente ; 0 = on calcule cette période SANS son propre report
 //   (utilisé pour évaluer le restant de la période précédente → 1 seul niveau).
+// - `quotaOverride` : quota annuel propre au contrat pour ce type
+//   (contrat.quotasParType[type]) ; prime sur le quota par défaut de la politique
+//   quand il est défini. Voir acquisPeriode.
 export function calculerSolde(
   collaborateur: Collaborateur,
   contrat: Contrat,
@@ -242,9 +259,10 @@ export function calculerSolde(
   politique: PolitiqueConges,
   dateRef: string,
   niveauReport = 1,
+  quotaOverride?: number,
 ): SoldePeriode {
   const periode = periodePour(dateRef, politique)
-  const base = arrondi(acquisPeriode(contrat, politique, periode, dateRef))
+  const base = arrondi(acquisPeriode(contrat, politique, periode, dateRef, quotaOverride))
 
   // Report de la période PRÉCÉDENTE (borné à 1 niveau).
   let reportBrut = 0
@@ -260,6 +278,7 @@ export function calculerSolde(
       politique,
       veille,
       0, // pas de report en cascade → pas de récursion infinie
+      quotaOverride, // même source de quota (contrat) sur la période précédente
     )
     const restantPrec = Math.max(0, prec.restant)
     reportBrut =

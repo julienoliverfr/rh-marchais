@@ -32,7 +32,7 @@ import type {
   CongeType,
   TypeAbsence,
 } from '../types'
-import { computeNbJours, typeASolde } from '../lib/conges'
+import { computeNbJours, quotasParTypeDe, typeASolde } from '../lib/conges'
 import { isInMonthKey, todayISO } from '../lib/dates'
 import { minutesToDecimalHours, repartitionMoisMinutes } from '../lib/hours'
 import {
@@ -78,7 +78,8 @@ interface ModeleRow {
   unite: ModeleContrat['unite']
   base: number
   seuil_hebdo: number
-  conges_solde: number
+  // Quotas de congés par type à solde (jours/type) donnés par ce modèle.
+  quotas_par_type: Partial<Record<CongeType, number>> | null
 }
 
 interface CollaborateurRow {
@@ -94,7 +95,8 @@ interface ContratRow {
   unite: Contrat['unite']
   base: number
   seuil_hebdo: number
-  conges_solde: number
+  // Quotas de congés par type à solde (jours/type) propres au contrat.
+  quotas_par_type: Partial<Record<CongeType, number>> | null
   date_debut: string | null
 }
 
@@ -243,7 +245,8 @@ function modeleFromRow(r: ModeleRow): ModeleContrat {
     unite: r.unite,
     base: Number(r.base),
     seuilHebdo: Number(r.seuil_hebdo),
-    congesSolde: Number(r.conges_solde),
+    // MIGRATION douce : accepte un ancien enregistrement sans quotas (→ défauts).
+    quotasParType: r.quotas_par_type ?? {},
   }
 }
 function modeleToRow(m: ModeleContrat): ModeleRow {
@@ -254,7 +257,7 @@ function modeleToRow(m: ModeleContrat): ModeleRow {
     unite: m.unite,
     base: m.base,
     seuil_hebdo: m.seuilHebdo,
-    conges_solde: m.congesSolde,
+    quotas_par_type: quotasParTypeDe(m),
   }
 }
 
@@ -264,7 +267,8 @@ function contratFromRow(r: ContratRow): Contrat {
     unite: r.unite,
     base: Number(r.base),
     seuilHebdo: Number(r.seuil_hebdo),
-    congesSolde: Number(r.conges_solde),
+    // MIGRATION douce : accepte un ancien enregistrement sans quotas (→ défauts).
+    quotasParType: r.quotas_par_type ?? {},
     dateDebut: r.date_debut ?? undefined,
   }
 }
@@ -275,7 +279,7 @@ function contratToRow(collaborateurId: string, c: Contrat): ContratRow {
     unite: c.unite,
     base: c.base,
     seuil_hebdo: c.seuilHebdo,
-    conges_solde: c.congesSolde,
+    quotas_par_type: quotasParTypeDe(c),
     date_debut: c.dateDebut ?? null,
   }
 }
@@ -588,13 +592,14 @@ export class SupabaseRepository implements Repository {
       peutSaisirPour: ciblesParDelegant.get(r.id) ?? [],
       contrat:
         contratByCollab.get(r.id) ??
-        // Contrat manquant (donnée incomplète) : repli neutre pour ne pas casser l'UI.
+        // Contrat manquant (donnée incomplète) : repli neutre pour ne pas casser
+        // l'UI. Quotas vides → le moteur retombe sur les défauts des politiques.
         {
           modeleId: '',
           unite: 'heures',
           base: 35,
           seuilHebdo: this.regles.seuilHsupDefautHebdo,
-          congesSolde: 25,
+          quotasParType: {},
         },
     }))
 
@@ -807,7 +812,8 @@ export class SupabaseRepository implements Repository {
           unite: modele?.unite ?? 'heures',
           base: modele?.base ?? 35,
           seuilHebdo: modele?.seuilHebdo ?? seuilDefaut,
-          congesSolde: modele?.congesSolde ?? 25,
+          // Quotas de congés PAR TYPE hérités du modèle (repli défaut politique).
+          quotasParType: modele ? quotasParTypeDe(modele) : {},
           dateDebut: row.dateDebut,
         },
       }
@@ -1256,12 +1262,17 @@ export class SupabaseRepository implements Repository {
     const congesValides = this.listConges({ collaborateurId, statut: 'validee' }).filter(
       (c) => c.type === typeId,
     )
+    // Source du quota : contrat.quotasParType[type] s'il est défini, sinon le
+    // quota par défaut de la politique (repli géré côté moteur).
+    const quotaOverride = quotasParTypeDe(collaborateur.contrat)[typeId]
     const auto = calculerSolde(
       collaborateur,
       collaborateur.contrat,
       congesValides,
       politique,
       dateRef,
+      1,
+      quotaOverride,
     )
 
     const override = this.soldes.find(

@@ -29,7 +29,7 @@ import type {
   CongeType,
   TypeAbsence,
 } from '../types'
-import { computeNbJours, typeASolde } from '../lib/conges'
+import { computeNbJours, quotasParTypeDe, typeASolde } from '../lib/conges'
 import { isInMonthKey, todayISO } from '../lib/dates'
 import { minutesToDecimalHours, repartitionMoisMinutes } from '../lib/hours'
 import {
@@ -161,6 +161,38 @@ export class LocalStorageRepository implements Repository {
       }
       write(KEYS.politiques, map)
     }
+
+    // 3) Quotas PAR TYPE sur les modèles et contrats : un ancien `congesSolde`
+    //    (solde CP unique) devient `quotasParType = { conge_paye: <valeur> }`.
+    //    Idempotent : on ne réécrit qu'une entité dépourvue de `quotasParType`.
+    const rawModeles = read<ModeleContrat[] | null>(KEYS.modeles, null)
+    if (rawModeles && rawModeles.some((m) => m.quotasParType === undefined)) {
+      const modeles = rawModeles.map((m) =>
+        m.quotasParType === undefined
+          ? { ...m, quotasParType: quotasParTypeDe(m), congesSolde: undefined }
+          : m,
+      )
+      write(KEYS.modeles, modeles)
+    }
+    const rawCollabs = read<Collaborateur[] | null>(KEYS.collaborateurs, null)
+    if (
+      rawCollabs &&
+      rawCollabs.some((c) => c.contrat && c.contrat.quotasParType === undefined)
+    ) {
+      const collabs = rawCollabs.map((c) =>
+        c.contrat && c.contrat.quotasParType === undefined
+          ? {
+              ...c,
+              contrat: {
+                ...c.contrat,
+                quotasParType: quotasParTypeDe(c.contrat),
+                congesSolde: undefined,
+              },
+            }
+          : c,
+      )
+      write(KEYS.collaborateurs, collabs)
+    }
   }
 
   // Familles
@@ -282,7 +314,9 @@ export class LocalStorageRepository implements Repository {
           unite: modele?.unite ?? 'heures',
           base: modele?.base ?? 35,
           seuilHebdo: modele?.seuilHebdo ?? seuilDefaut,
-          congesSolde: modele?.congesSolde ?? 25,
+          // Quotas de congés PAR TYPE hérités du modèle (repli défaut politique
+          // par type si le modèle ne précise rien).
+          quotasParType: modele ? quotasParTypeDe(modele) : {},
           // Date d'entrée si fournie → proratise l'acquis (lib/soldes.ts).
           dateDebut: row.dateDebut,
         },
@@ -727,12 +761,19 @@ export class LocalStorageRepository implements Repository {
       statut: 'validee',
     }).filter((c) => c.type === typeId)
 
+    // Source du quota : contrat.quotasParType[type] s'il est défini, sinon le
+    // quota par défaut de la politique (géré côté moteur). Migration douce gérée
+    // par quotasParTypeDe (ancien congesSolde → conge_paye).
+    const quotaOverride = quotasParTypeDe(collaborateur.contrat)[typeId]
+
     const auto = calculerSolde(
       collaborateur,
       collaborateur.contrat,
       congesValides,
       politique,
       dateRef,
+      1,
+      quotaOverride,
     )
 
     // Override manuel de l'acquis pour ce type + cette période (prime).

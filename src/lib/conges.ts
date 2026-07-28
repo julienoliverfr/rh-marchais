@@ -1,5 +1,22 @@
 import type { CongeType, DemiJour, TypeAbsence } from '../types'
 
+// Résout les quotas de congés PAR TYPE d'un modèle ou d'un contrat, en gérant la
+// MIGRATION ascendante des données historiques : si `quotasParType` est absent
+// mais qu'un ancien `congesSolde` (solde CP unique) est présent, on le replie sur
+// `{ conge_paye: congesSolde }`. Renvoie un objet vide si rien n'est défini
+// (→ le moteur retombe alors sur le quota par défaut de la politique de chaque
+// type). Ne mute jamais la source.
+export function quotasParTypeDe(source: {
+  quotasParType?: Partial<Record<CongeType, number>>
+  congesSolde?: number
+}): Partial<Record<CongeType, number>> {
+  if (source.quotasParType) return source.quotasParType
+  if (typeof source.congesSolde === 'number') {
+    return { conge_paye: source.congesSolde }
+  }
+  return {}
+}
+
 // Libellés de repli des types d'absence (utilisés si la config `typesAbsence`
 // n'est pas disponible ; sinon on affiche le libellé paramétré par l'admin).
 export const CONGE_TYPE_LABELS: Record<CongeType, string> = {
