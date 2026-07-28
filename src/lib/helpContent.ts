@@ -78,7 +78,98 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
   },
   '/responsable/exports': {
     title: 'Exports',
-    lines: ['Générez le fichier des heures pour le comptable.'],
+    lines: [
+      'Générez le récapitulatif mensuel des heures pour le comptable (CSV ou Excel).',
+      'Choisissez le mois et l’équipe, vérifiez l’aperçu, puis exportez.',
+      'Après export, les saisies sont verrouillées : seul un responsable peut les rouvrir.',
+    ],
+  },
+  '/saisie-collegue': {
+    title: 'Saisir pour un collègue',
+    lines: [
+      'Vous êtes autorisé à noter les heures de certains collègues.',
+      'Choisissez la personne, puis remplissez comme pour vous.',
+      'Si un collègue manque dans la liste, demandez à votre responsable.',
+    ],
+  },
+  '/responsable': {
+    title: 'Saisir pour un collaborateur',
+    lines: [
+      'Notez les heures à la place d’un collaborateur (absence, oubli, pas de téléphone).',
+      'La saisie garde votre nom comme auteur : la traçabilité est conservée.',
+    ],
+  },
+
+  // ------------------------------ Administration ---------------------------
+  '/responsable/familles': {
+    title: 'Équipes',
+    lines: [
+      'Une équipe regroupe des collaborateurs qui saisissent de la même façon.',
+      'Journée continue = une heure de début et de fin. Demi-journées = matin et après-midi.',
+      'La pause déduite s’applique par défaut aux saisies de l’équipe.',
+    ],
+  },
+  '/responsable/collaborateurs': {
+    title: 'Collaborateurs',
+    lines: [
+      'Créez et modifiez les fiches : équipe, contrat, quotas de congés, délégations.',
+      'La délégation autorise une personne à saisir les heures d’une autre.',
+      '« Importer » permet de créer plusieurs collaborateurs depuis un fichier.',
+    ],
+  },
+  '/responsable/politique-conges': {
+    title: 'Politique de congés',
+    lines: [
+      'Réglez, pour chaque type à solde, la période de référence et l’acquisition.',
+      'Le quota fixé ici sert de valeur par défaut si le contrat n’en précise pas.',
+      'Pour l’ancienneté, définissez les paliers (à partir de X ans → Y jours).',
+    ],
+  },
+  '/responsable/admin/modeles': {
+    title: 'Modèles de contrat',
+    lines: [
+      'Un modèle pré-remplit les contrats : base horaire, seuil d’heures sup, congés.',
+      '« Décompte des congés » choisit jours ouvrés (lun–ven) ou ouvrables (lun–sam).',
+      'Modifier un modèle ne change pas les contrats déjà créés.',
+    ],
+  },
+  '/responsable/admin/absences': {
+    title: "Types d'absence",
+    lines: [
+      'Ces types alimentent le menu des demandes de congé.',
+      'Un type « à solde » porte son propre compteur (acquis / pris / restant).',
+      'Vous pouvez ajouter, modifier ou supprimer un type non utilisé.',
+    ],
+  },
+  '/responsable/admin/feries': {
+    title: 'Jours fériés',
+    lines: [
+      'Les fériés nationaux sont calculés automatiquement : jamais décomptés des congés.',
+      'Ajoutez ici un pont chômé, ou marquez un férié comme travaillé pour qu’il soit décompté.',
+    ],
+  },
+  '/responsable/admin/utilisateurs': {
+    title: 'Utilisateurs',
+    lines: [
+      'Gérez les comptes de connexion : création, rôle, collaborateur rattaché.',
+      '« Modifier » permet aussi de réinitialiser un mot de passe oublié.',
+      'Un employé doit être rattaché à un collaborateur pour saisir ses heures.',
+    ],
+  },
+  '/responsable/admin/regles': {
+    title: 'Règles générales',
+    lines: [
+      'Fenêtre de saisie rétroactive (par défaut 7 jours), seuil d’heures sup par défaut.',
+      'Le verrouillage après export empêche toute modification des heures envoyées.',
+    ],
+  },
+  '/responsable/admin/import': {
+    title: 'Importer des collaborateurs',
+    lines: [
+      '1) Téléchargez le modèle de fichier. 2) Remplissez-le. 3) Déposez-le ici.',
+      'Un aperçu montre les lignes valides et les erreurs AVANT tout enregistrement.',
+      'Les colonnes Nom, Prénom, Identifiant, Équipe et Modèle de contrat sont obligatoires.',
+    ],
   },
 }
 

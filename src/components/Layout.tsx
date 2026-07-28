@@ -79,6 +79,7 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/responsable/exports">Exports</NavLink>
             <NavLink to="/responsable/admin">Administration</NavLink>
+            <NavLink to="/aide">Aide</NavLink>
           </>
         )}
       </nav>
