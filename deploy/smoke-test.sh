@@ -65,11 +65,18 @@ CT=$(post conges "$JEAN" "{\"id\":\"$C1\",\"collaborateur_id\":\"$JC\",\"type\":
 AT=$(post audit_log "$JEAN" "{\"id\":\"$A1\",\"cible_type\":\"conge\",\"cible_id\":\"$C1\",\"action\":\"demande_conge\",\"par_user_id\":\"jean@demo.local\"}")
 [ "$AT" = "201" ] && ok "écriture audit en INSERT ($AT)" || ko "écriture audit ($AT : $(cat /tmp/smoke_body.txt))"
 
-# 4b) l'audit NE doit PAS accepter un upsert (append-only : pas de policy UPDATE)
-AU=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API/rest/v1/audit_log" -H "apikey: $ANON" \
+# 4b) IMMUABILITÉ : une trace EXISTANTE ne doit pas pouvoir être réécrite
+#     (ni par un update, ni par un upsert « INSERT … ON CONFLICT DO UPDATE »).
+A2=aaaaaaaa-0000-4000-8000-000000000004
+psql "insert into public.audit_log (id,cible_type,cible_id,action,par_user_id,detail)
+      values ('$A2','conge','$C1','conge_validee','sophie@demo.local','ORIGINAL')
+      on conflict (id) do nothing;" >/dev/null
+curl -s -o /dev/null -X POST "$API/rest/v1/audit_log" -H "apikey: $ANON" \
   -H "Authorization: Bearer $JEAN" -H "Content-Type: application/json" -H "Prefer: resolution=merge-duplicates" \
-  -d "{\"id\":\"$X9\",\"cible_type\":\"conge\",\"cible_id\":\"$C1\",\"action\":\"demande_conge\",\"par_user_id\":\"jean@demo.local\"}")
-[ "$AU" != "201" ] && ok "audit refuse l'upsert (append-only, $AU)" || ko "audit accepte l'upsert (à écrire en INSERT !)"
+  -d "{\"id\":\"$A2\",\"cible_type\":\"conge\",\"cible_id\":\"$C1\",\"action\":\"conge_refusee\",\"par_user_id\":\"sophie@demo.local\",\"detail\":\"FALSIFIE\"}"
+DET=$(psql "select detail from public.audit_log where id='$A2'")
+[ "$DET" = "ORIGINAL" ] && ok "audit : trace existante non falsifiable (reste $DET)" \
+  || ko "FAILLE: trace d'audit réécrite ($DET)"
 
 # 4c) SÉCURITÉ : jean ne doit PAS pouvoir se promouvoir responsable
 patch(){ curl -s -o /tmp/smoke_body.txt -w "%{http_code}" -X PATCH "$API/rest/v1/$1" \
@@ -103,7 +110,7 @@ NT=$(post saisies "$JEAN" "{\"id\":\"$X9\",\"collaborateur_id\":\"$AC\",\"date\"
 [ "$NT" != "201" ] && ok "jean NE peut PAS saisir pour autrui (rejet $NT)" || ko "FAILLE: jean a saisi pour autrui ($NT)"
 
 # Nettoyage des données de test
-psql "delete from public.audit_log where id in ('$A1','$X9'); delete from public.conges where id='$C1'; delete from public.saisies where id in ('$S1','$X9');" >/dev/null
+psql "delete from public.audit_log where id in ('$A1','$A2','$X9'); delete from public.conges where id='$C1'; delete from public.saisies where id in ('$S1','$X9');" >/dev/null
 
 echo ""
 echo "== Résultat : $PASS OK, $FAIL KO =="
