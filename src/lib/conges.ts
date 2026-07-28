@@ -72,7 +72,35 @@ export function computeNbJours(
     if (estJourDecompte(cur, mode)) count += 1
     cur.setDate(cur.getDate() + 1)
   }
+
+  // --- Mode OUVRABLES : prolongation jusqu'à la veille de la reprise ---------
+  // Règle légale : le décompte court du 1er jour ouvrable d'absence JUSQU'AU
+  // DERNIER JOUR OUVRABLE PRÉCÉDANT LA REPRISE (service-public.gouv.fr F2258).
+  // Si le congé se termine juste avant le repos hebdomadaire, le samedi tombe
+  // donc DANS la période décomptée, même s'il n'est pas travaillé.
+  //   · congé lun→mer, reprise jeudi  → 3 j (aucune prolongation)
+  //   · congé mer→ven, reprise lundi  → 4 j (le samedi est décompté)
+  // On avance après `dateFin` tant que les jours ne sont PAS travaillés
+  // (samedi/dimanche/férié chômé) et on s'arrête au 1er jour de reprise ; seuls
+  // les jours décomptables rencontrés (le samedi) s'ajoutent.
+  if (mode === 'ouvrables') {
+    const suite = new Date(end)
+    suite.setDate(suite.getDate() + 1)
+    // Garde-fou : 7 itérations max (une semaine suffit à retrouver la reprise).
+    for (let i = 0; i < 7 && !estJourTravaille(suite); i++) {
+      if (estJourDecompte(suite, mode)) count += 1
+      suite.setDate(suite.getDate() + 1)
+    }
+  }
   return count
+}
+
+// Jour de travail habituel de l'entreprise : lundi→vendredi, hors férié chômé.
+// Sert à repérer le jour de REPRISE (fin de la fenêtre de décompte).
+function estJourTravaille(d: Date): boolean {
+  const jour = d.getDay()
+  if (jour < 1 || jour > 5) return false
+  return !estFerie(isoLocal(d))
 }
 
 // Un jour est décomptable s'il tombe dans la semaine couverte par le mode
