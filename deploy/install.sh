@@ -93,6 +93,9 @@ docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/rls.
 # À appliquer APRÈS rls.sql (elles dépendent de public.is_responsable()) et AVANT
 # la création des comptes de démo + le seed.
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/functions.sql"
+# Durcissement de sécurité (RLS + triggers) : sans lui, un employé pourrait se
+# promouvoir responsable et valider ses propres heures/congés.
+docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/security.sql"
 # Comptes d'authentification (fictifs)
 for pair in "jean@demo.local" "amelie@demo.local" "sophie@demo.local"; do
   echo "  - création de $pair"
