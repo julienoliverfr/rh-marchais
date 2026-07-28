@@ -334,6 +334,10 @@ export interface SoldePeriode {
   ancienneteAns?: number
   // Message non bloquant (ex. mode ancienneté sans date d'entrée → acquis à 0).
   avertissement?: string
+  // Vrai si l'acquis provient d'une ALLOCATION MANUELLE (override) et non du
+  // calcul automatique. Dans ce cas, modifier le contrat ou la date d'entrée
+  // n'a AUCUN effet sur ce solde tant que l'allocation n'est pas retirée.
+  allocationManuelle?: boolean
 }
 
 // Solde d'UN type à solde pour un collaborateur (retour de getSoldesTousTypes).

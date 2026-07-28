@@ -1392,9 +1392,28 @@ export class SupabaseRepository implements Repository {
         acquisPeriode: acquis,
         acquisRestant: restant,
         dateExpirationReport: undefined,
+        // Ce solde NE SUIT PAS le calcul (contrat / date d'entrée) tant que
+        // l'allocation manuelle n'est pas retirée (deleteAllocation).
+        allocationManuelle: true,
       }
     }
     return auto
+  }
+
+  deleteAllocation(
+    collaborateurId: string,
+    typeId: CongeType,
+    periodeLabel: string,
+  ): void {
+    const cible = this.soldes.find(
+      (s) =>
+        s.collaborateurId === collaborateurId &&
+        this.typeIdOverride(s) === typeId &&
+        s.periodeLabel === periodeLabel,
+    )
+    if (!cible) return
+    this.soldes = this.soldes.filter((s) => s.id !== cible.id)
+    this.removeRow('soldes', 'id', cible.id, 'suppression allocation')
   }
 
   getSoldesTousTypes(

@@ -20,6 +20,11 @@ export default function Layout() {
     !isResponsable &&
     (collaborateurs.find((c) => c.id === session?.collaborateurId)?.peutSaisirPour
       ?.length ?? 0) > 0
+  // Un responsable RATTACHÉ à un collaborateur est aussi un salarié : il doit
+  // pouvoir saisir ses heures et gérer SES congés comme tout le monde.
+  const responsableSalarie =
+    isResponsable &&
+    Boolean(collaborateurs.find((c) => c.id === session?.collaborateurId))
   const nbEnAttente = saisies.filter((s) => s.statut === 'en_attente').length
   const nbCongesDemandes = conges.filter((c) => c.statut === 'demandee').length
 
@@ -79,6 +84,12 @@ export default function Layout() {
             </NavLink>
             <NavLink to="/responsable/exports">Exports</NavLink>
             <NavLink to="/responsable/admin">Administration</NavLink>
+            {responsableSalarie && (
+              <>
+                <NavLink to="/saisie">Mes heures</NavLink>
+                <NavLink to="/conges">Mes congés</NavLink>
+              </>
+            )}
             <NavLink to="/aide">Aide</NavLink>
           </>
         )}

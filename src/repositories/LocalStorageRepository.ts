@@ -843,6 +843,7 @@ export class LocalStorageRepository implements Repository {
     if (override) {
       const acquis = override.acquis
       const restant = Math.round((acquis - auto.pris) * 100) / 100
+      // Signale que ce solde NE SUIT PAS le calcul (contrat / date d'entrée).
       // L'override remplace l'acquis TOTAL (aucun report distinct : l'allocation
       // manuelle est réputée être l'acquis complet de la période).
       return {
@@ -855,9 +856,28 @@ export class LocalStorageRepository implements Repository {
         acquisPeriode: acquis,
         acquisRestant: restant,
         dateExpirationReport: undefined,
+        allocationManuelle: true,
       }
     }
     return auto
+  }
+
+  deleteAllocation(
+    collaborateurId: string,
+    typeId: CongeType,
+    periodeLabel: string,
+  ): void {
+    write(
+      KEYS.soldes,
+      this.getSoldes().filter(
+        (s) =>
+          !(
+            s.collaborateurId === collaborateurId &&
+            this.typeIdOverride(s) === typeId &&
+            s.periodeLabel === periodeLabel
+          ),
+      ),
+    )
   }
 
   // Soldes de TOUS les types à solde (une entrée par type à solde configuré).

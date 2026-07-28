@@ -57,7 +57,10 @@ export default function App() {
           <Route
             path="/saisie"
             element={
-              <ProtectedRoute roles={['employe']}>
+              /* Ouvert au responsable : rattaché à un collaborateur, il est
+                 aussi salarié et saisit ses propres heures/congés. Les écrans
+                 gèrent proprement le cas « aucun collaborateur rattaché ». */
+              <ProtectedRoute roles={['employe', 'responsable']}>
                 <Saisie />
               </ProtectedRoute>
             }
@@ -65,7 +68,7 @@ export default function App() {
           <Route
             path="/historique"
             element={
-              <ProtectedRoute roles={['employe']}>
+              <ProtectedRoute roles={['employe', 'responsable']}>
                 <Historique />
               </ProtectedRoute>
             }
@@ -73,7 +76,7 @@ export default function App() {
           <Route
             path="/conges"
             element={
-              <ProtectedRoute roles={['employe']}>
+              <ProtectedRoute roles={['employe', 'responsable']}>
                 <MesConges />
               </ProtectedRoute>
             }

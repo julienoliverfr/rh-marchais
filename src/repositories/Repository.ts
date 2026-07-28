@@ -189,6 +189,14 @@ export interface Repository {
 
   // Override MANUEL de l'acquis d'un collaborateur pour un TYPE à solde et la
   // période dont le libellé est `periodeLabel`. Prime sur le calcul auto.
+  // Retire l'allocation manuelle : le solde revient au CALCUL AUTOMATIQUE
+  // (prorata d'entrée, quota du contrat, report…). Sans effet si absente.
+  deleteAllocation(
+    collaborateurId: string,
+    typeId: CongeType,
+    periodeLabel: string,
+  ): void
+
   setAllocation(
     collaborateurId: string,
     typeId: CongeType,

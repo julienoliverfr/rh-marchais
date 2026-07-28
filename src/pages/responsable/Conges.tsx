@@ -9,6 +9,7 @@ import DataTable from '../../components/DataTable'
 import type { ColumnDef, FacetDef } from '../../components/DataTable'
 import FieldError from '../../components/FieldError'
 import { useToast } from '../../components/Toast'
+import { useConfirm } from '../../components/ConfirmDialog'
 
 function famillePillClass(nom: string): string {
   const key = nom.trim().toLowerCase()
@@ -29,7 +30,9 @@ export default function Conges() {
   const refuserConge = useDataStore((s) => s.refuserConge)
   const ajusterJoursConge = useDataStore((s) => s.ajusterJoursConge)
   const setAllocation = useDataStore((s) => s.setAllocation)
+  const deleteAllocation = useDataStore((s) => s.deleteAllocation)
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [refusId, setRefusId] = useState<string | null>(null)
   const [motif, setMotif] = useState('')
@@ -153,6 +156,21 @@ export default function Conges() {
     } else {
       setAjustError(res.error ?? 'Ajustement impossible.')
     }
+  }
+
+  // Retire l'allocation manuelle : le solde repart du CALCUL automatique
+  // (quota du contrat, prorata de la date d'entrée, report…).
+  async function handleResetAllocation(collaborateurId: string) {
+    const ok = await confirm({
+      title: 'Revenir au calcul automatique ?',
+      message:
+        'La valeur saisie à la main sera supprimée. Le solde sera de nouveau calculé à partir du contrat, de la date d’entrée et de la politique de congés.',
+      confirmLabel: 'Recalculer',
+    })
+    if (!ok) return
+    deleteAllocation(collaborateurId, typeSolde, periode.label)
+    setAllocDraft({ ...allocDraft, [collaborateurId]: '' })
+    toast.success('Solde recalculé automatiquement.')
   }
 
   // Allocation = override manuel de l'acquis pour le TYPE + la période sélectionnés.
@@ -396,7 +414,26 @@ export default function Conges() {
       key: 'acquis',
       label: 'Acquis',
       align: 'right',
-      render: (col) => `${getSolde(col.id, typeSolde, refDate).acquis} j`,
+      // Un acquis issu d'une ALLOCATION MANUELLE ne suit plus le calcul
+      // (contrat, date d'entrée, prorata) : on le signale explicitement.
+      render: (col) => {
+        const s = getSolde(col.id, typeSolde, refDate)
+        return (
+          <>
+            {s.acquis} j
+            {s.allocationManuelle && (
+              <div>
+                <span
+                  className="badge en_attente"
+                  title="Valeur saisie à la main : elle ignore le calcul automatique (contrat, date d'entrée, prorata)."
+                >
+                  manuel
+                </span>
+              </div>
+            )}
+          </>
+        )
+      },
     },
     {
       key: 'report',
@@ -461,6 +498,15 @@ export default function Conges() {
           >
             Enregistrer
           </button>
+          {getSolde(col.id, typeSolde, refDate).allocationManuelle && (
+            <button
+              className="btn danger small"
+              title="Supprime la valeur saisie à la main : le solde est de nouveau calculé (contrat, date d'entrée, prorata, report)."
+              onClick={() => handleResetAllocation(col.id)}
+            >
+              Recalculer
+            </button>
+          )}
         </div>
       ),
     },

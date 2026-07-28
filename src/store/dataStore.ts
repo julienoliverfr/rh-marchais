@@ -113,6 +113,12 @@ interface DataState {
     periodeLabel: string,
     acquis: number,
   ) => void
+  // Retire l'allocation manuelle → retour au calcul automatique.
+  deleteAllocation: (
+    collaborateurId: string,
+    typeId: CongeType,
+    periodeLabel: string,
+  ) => void
   getSolde: (collaborateurId: string, typeId: CongeType, dateRef?: string) => SoldePeriode
   getSoldesTousTypes: (collaborateurId: string, dateRef?: string) => SoldeParType[]
 
@@ -321,6 +327,11 @@ export const useDataStore = create<DataState>((set, get) => {
 
     setAllocation: (collaborateurId, typeId, periodeLabel, acquis) => {
       repository.setAllocation(collaborateurId, typeId, periodeLabel, acquis)
+      set({ soldesTick: get().soldesTick + 1 })
+    },
+
+    deleteAllocation: (collaborateurId, typeId, periodeLabel) => {
+      repository.deleteAllocation(collaborateurId, typeId, periodeLabel)
       set({ soldesTick: get().soldesTick + 1 })
     },
 
