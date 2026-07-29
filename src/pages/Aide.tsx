@@ -44,6 +44,10 @@ const FAQS: Faq[] = [
     a: 'Dans « Mes congés », chaque carte montre vos jours restants par type.',
   },
   {
+    q: 'J’ai deux contrats, que dois-je faire ?',
+    a: 'En haut de l’écran de saisie, choisissez « Pour quel contrat ? » avant d’entrer vos heures. Faites de même dans « Mes congés » : chaque contrat a ses propres jours de congés. Si vous travaillez sur les deux le même jour, notez chaque partie sur son contrat.',
+  },
+  {
     q: 'Puis-je saisir pour un collègue ?',
     a: 'Seulement si votre responsable vous y a autorisé. Dans ce cas, l’écran « Saisir pour un collègue » apparaît dans le menu.',
   },
@@ -123,6 +127,7 @@ const GUIDE_ADMIN: GuideEntry[] = [
     to: '/responsable/collaborateurs',
     lignes: [
       'Fiche par personne : équipe, contrat (base, seuil d’heures sup, décompte des congés), quotas par type.',
+      'Une fiche = UN contrat. Une personne cumulant deux mi-temps a donc deux fiches (une par contrat), reliées ensuite sur son compte dans Utilisateurs.',
       'La délégation autorise une personne à saisir les heures d’une ou plusieurs autres.',
       '« Importer (CSV / Excel) » crée plusieurs collaborateurs d’un coup, avec un aperçu avant enregistrement.',
     ],
@@ -168,6 +173,7 @@ const GUIDE_ADMIN: GuideEntry[] = [
       'Comptes de connexion : identifiant, rôle, collaborateur rattaché.',
       '« Modifier » permet de changer le rôle, le rattachement, ou de réinitialiser un mot de passe oublié.',
       'Un employé non rattaché à un collaborateur ne peut ni saisir ses heures ni poser de congés.',
+      'Personne ayant PLUSIEURS CONTRATS : rattachez le premier, puis cochez les autres dans « Autres contrats de cette personne ». Elle garde une seule connexion et choisit son contrat au moment de saisir.',
     ],
   },
   {
@@ -209,6 +215,10 @@ const REGLES: { q: string; a: string }[] = [
   {
     q: 'Jusqu’à quand un salarié peut-il saisir en retard ?',
     a: 'Jusqu’à une semaine en arrière (réglable dans « Règles générales »). Au-delà, seul un responsable peut intervenir.',
+  },
+  {
+    q: 'Une personne a deux contrats : comment sont comptées ses heures ?',
+    a: 'Chaque contrat est indépendant : son propre seuil d’heures supplémentaires, son propre solde de congés, et sa propre ligne dans l’export (donc deux bulletins). En revanche, les durées maximales s’apprécient sur la PERSONNE : l’écran Validations affiche le cumul de tous ses contrats et le signale en rouge au-delà de 48 h par semaine.',
   },
   {
     q: 'Qui peut modifier une saisie validée ou exportée ?',

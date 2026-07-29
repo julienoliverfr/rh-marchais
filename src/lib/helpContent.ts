@@ -48,6 +48,9 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       "2) Entrez l'heure de début et l'heure de fin.",
       '3) Vérifiez le total, puis touchez « Enregistrer ».',
       'Vous pouvez noter un jour oublié jusqu’à une semaine en arrière.',
+      // N'apparaît à l'écran que pour les personnes concernées, mais l'aide le
+      // mentionne : c'est le geste le plus facile à oublier.
+      'Si vous avez deux contrats, choisissez d’abord « Pour quel contrat ? » en haut : vos heures seront comptées sur celui-là.',
     ],
   },
   '/historique': {
@@ -64,6 +67,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       'Chaque carte montre les jours qu’il vous reste, par type de congé.',
       'Pour poser des congés : touchez « Demander un congé », choisissez le type et les dates, puis envoyez.',
       'Votre responsable reçoit la demande.',
+      'Si vous avez deux contrats, choisissez d’abord « Pour quel contrat ? » : chaque contrat a ses propres jours de congés.',
     ],
   },
   '/responsable/validations': {
@@ -122,6 +126,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
     lines: [
       'Créez et modifiez les fiches : équipe, contrat, quotas de congés, délégations.',
       'La délégation autorise une personne à saisir les heures d’une autre.',
+      'Une personne ayant DEUX contrats (deux mi-temps) a DEUX fiches ici, une par contrat. On les relie ensuite sur son compte, dans Utilisateurs.',
       '« Importer » permet de créer plusieurs collaborateurs depuis un fichier.',
     ],
   },
@@ -162,6 +167,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       'Gérez les comptes de connexion : création, rôle, collaborateur rattaché.',
       '« Modifier » permet aussi de réinitialiser un mot de passe oublié.',
       'Un employé doit être rattaché à un collaborateur pour saisir ses heures.',
+      'Deux contrats pour la même personne ? Créez DEUX fiches collaborateur, puis cochez la seconde dans « Autres contrats de cette personne » : elle n’aura qu’un seul mot de passe.',
     ],
   },
   '/responsable/admin/regles': {
