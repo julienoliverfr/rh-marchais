@@ -313,6 +313,12 @@ select:focus {
   outline-offset: 1px;
 }
 
+/* Feuille mensuelle : ligne de sous-total hebdomadaire (heures sup) */
+tr.semaine-total > td {
+  background: var(--surface-alt, rgba(0, 0, 0, 0.04));
+  border-top: 2px solid var(--border);
+}
+
 /* Liste des délégations : cases alignées en colonnes propres */
 .delegation-list {
   display: grid;

@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import type { CongeType } from '../../types'
 import { useDataStore } from '../../store/dataStore'
 import { CONGE_TYPE_LABELS } from '../../lib/conges'
 import { feriesCalcules } from '../../lib/feries'
-import { currentMonthKey, formatMonthFr } from '../../lib/dates'
+import { currentMonthKey, formatDateFrNum, formatMonthFr } from '../../lib/dates'
 import {
   describeHoraires,
   formatMinutes,
@@ -25,6 +25,15 @@ import EmptyState from '../../components/EmptyState'
 // ============================================================================
 
 const JOURS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
+
+// Lundi (ISO yyyy-mm-dd) de la semaine contenant `date`.
+function isoLundi(date: string): string {
+  const d = new Date(date + 'T12:00:00')
+  const jour = d.getDay()
+  d.setDate(d.getDate() + (jour === 0 ? -6 : 1 - jour))
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
 
 // Liste des jours (ISO) d'un mois 'AAAA-MM'.
 function joursDuMois(monthKey: string): string[] {
@@ -91,6 +100,31 @@ export default function FeuilleMensuelle() {
       }
     })
   }, [collab, saisies, conges, mois, feriesDuMois])
+
+  // Sous-totaux PAR SEMAINE ISO : les heures supplémentaires sont une notion
+  // HEBDOMADAIRE (au-delà du seuil du contrat), jamais journalière — les
+  // afficher sur une ligne de jour n'aurait aucun sens. On les rattache donc à
+  // la semaine, en signalant les semaines à cheval sur deux mois.
+  const semaines = useMemo(() => {
+    if (!collab) return new Map<string, { total: number; sup: number; horsMois: boolean }>()
+    const seuilMin =
+      (collab.contrat.seuilHebdo || regles.seuilHsupDefautHebdo) * 60
+    const retenues = saisies.filter(
+      (s) =>
+        s.collaborateurId === collab.id &&
+        (s.statut === 'validee' || s.statut === 'verrouillee'),
+    )
+    const acc = new Map<string, { total: number; sup: number; horsMois: boolean }>()
+    for (const s of retenues) {
+      const lundi = isoLundi(s.date)
+      const e = acc.get(lundi) ?? { total: 0, sup: 0, horsMois: false }
+      e.total += s.totalMinutes
+      if (s.date.slice(0, 7) !== mois) e.horsMois = true
+      acc.set(lundi, e)
+    }
+    for (const e of acc.values()) e.sup = Math.max(0, e.total - seuilMin)
+    return acc
+  }, [collab, saisies, mois, regles])
 
   // Totaux du mois (mêmes règles que l'export : semaines complètes).
   const totaux = useMemo(() => {
@@ -192,8 +226,9 @@ export default function FeuilleMensuelle() {
                 </tr>
               </thead>
               <tbody>
-                {lignes.map((l) => (
-                  <tr key={l.date} className={l.weekend ? 'muted' : undefined}>
+                {lignes.map((l, i) => (
+                  <Fragment key={l.date}>
+                  <tr className={l.weekend ? 'muted' : undefined}>
                     <td>{l.jourLabel}</td>
                     <td>
                       {l.saisie ? (
@@ -224,6 +259,37 @@ export default function FeuilleMensuelle() {
                       )}
                     </td>
                   </tr>
+                  {/* Sous-total en fin de semaine (ou fin de mois) : les heures
+                      sup se calculent PAR SEMAINE, pas par jour. */}
+                  {(i === lignes.length - 1 ||
+                    isoLundi(lignes[i + 1].date) !== isoLundi(l.date)) &&
+                    (() => {
+                      const s = semaines.get(isoLundi(l.date))
+                      if (!s || s.total === 0) return null
+                      return (
+                        <tr className="semaine-total">
+                          <td colSpan={2}>
+                            <strong>Semaine du {formatDateFrNum(isoLundi(l.date))}</strong>
+                            {s.horsMois && (
+                              <span className="muted"> — à cheval sur deux mois</span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <strong>{formatMinutes(s.total)}</strong>
+                          </td>
+                          <td>
+                            {s.sup > 0 ? (
+                              <span className="badge en_attente">
+                                dont {formatMinutes(s.sup)} sup
+                              </span>
+                            ) : (
+                              <span className="muted">pas d'heures sup</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })()}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

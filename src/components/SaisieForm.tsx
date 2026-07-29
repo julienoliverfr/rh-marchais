@@ -162,14 +162,22 @@ export default function SaisieForm({
     e.preventDefault()
     if (!validate()) return
 
+    // Une saisie faite PAR UN RESPONSABLE est validée d'office : c'est lui le
+    // validateur, elle n'a personne à attendre. Cela évite qu'il doive repasser
+    // derrière lui-même sur l'écran Validations. La traçabilité est conservée
+    // (auteur de la saisie + validateur enregistrés).
+    const autoValidee = estResponsable && !existing
     const base: Saisie = {
       id: existing?.id ?? uid(),
       collaborateurId: collaborateur.id,
       date,
       totalMinutes: total,
-      statut: existing?.statut ?? 'en_attente',
+      statut: existing?.statut ?? (autoValidee ? 'validee' : 'en_attente'),
       saisiPar,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
+      ...(autoValidee
+        ? { validee_par: saisiPar, validee_le: new Date().toISOString() }
+        : {}),
     }
 
     const saisie: Saisie = isContinu
