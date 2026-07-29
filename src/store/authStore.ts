@@ -73,6 +73,11 @@ async function hydrateFromAuth(userId: string): Promise<Session | null> {
     identifiant: profile.identifiant,
     role: profile.role,
     collaborateurId: profile.collaborateur_id ?? undefined,
+    // Contrat principal + contrats secondaires (cumul de mi-temps).
+    collaborateurIds: [
+      profile.collaborateur_id,
+      ...((profile.collaborateurs_secondaires as string[] | null) ?? []),
+    ].filter((id): id is string => Boolean(id)),
     nomAffichage: profile.nom_affichage,
   }
   await supabaseRepository.init(session)
@@ -116,6 +121,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       identifiant: compte.identifiant,
       role: compte.role,
       collaborateurId: compte.collaborateurId,
+      collaborateurIds: [
+        compte.collaborateurId,
+        ...(compte.collaborateursSecondaires ?? []),
+      ].filter((id): id is string => Boolean(id)),
       nomAffichage: compte.nomAffichage,
     }
     localStorage.setItem(SESSION_KEY, JSON.stringify(session))

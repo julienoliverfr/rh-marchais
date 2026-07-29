@@ -115,7 +115,9 @@ export interface Compte {
   identifiant: string
   motDePasse: string
   role: Role
-  collaborateurId?: string // lien vers le collaborateur (pour un employé)
+  collaborateurId?: string // contrat principal (pour un employé)
+  // Contrats SUPPLÉMENTAIRES rattachés au même compte (cumul de mi-temps).
+  collaborateursSecondaires?: string[]
   nomAffichage: string
 }
 
@@ -124,7 +126,12 @@ export interface Session {
   compteId: string
   identifiant: string
   role: Role
+  // Contrat PRINCIPAL (compat : la plupart des écrans n'en gèrent qu'un).
   collaborateurId?: string
+  // TOUS les contrats de la personne (principal inclus). Une même personne peut
+  // cumuler deux mi-temps : une seule connexion, mais un solde de congés et un
+  // seuil d'heures sup PAR CONTRAT. Contient 0 ou 1 élément dans le cas courant.
+  collaborateurIds: string[]
   nomAffichage: string
 }
 

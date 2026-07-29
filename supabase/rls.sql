@@ -34,6 +34,19 @@ returns uuid language sql stable security definer set search_path = public as $$
   select collaborateur_id from public.profiles where id = auth.uid()
 $$;
 
+-- TOUS les contrats rattachés au compte courant : le contrat principal plus
+-- d'éventuels contrats SECONDAIRES. Une même personne peut cumuler plusieurs
+-- contrats chez nous (deux mi-temps sur des activités différentes) : elle doit
+-- alors saisir ses heures et ses congés sous une SEULE connexion, chaque
+-- contrat gardant son propre solde et son propre seuil d'heures supplémentaires.
+create or replace function public.auth_collaborateur_ids()
+returns uuid[] language sql stable security definer set search_path = public as $$
+  select array_remove(
+           array[collaborateur_id] || coalesce(collaborateurs_secondaires, '{}'::uuid[]),
+           null)
+  from public.profiles where id = auth.uid()
+$$;
+
 -- Périmètre (liste de familles) du responsable courant.
 create or replace function public.auth_perimetre()
 returns uuid[] language sql stable security definer set search_path = public as $$
@@ -69,7 +82,7 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (
     select 1 from public.delegations_saisie d
     where d.cible_collaborateur_id = cid
-      and d.delegant_collaborateur_id = public.auth_collaborateur_id()
+      and d.delegant_collaborateur_id = any(public.auth_collaborateur_ids())
   )
 $$;
 
@@ -166,7 +179,7 @@ create policy regles_write on public.regles_generales for all to authenticated
 drop policy if exists collaborateurs_select on public.collaborateurs;
 create policy collaborateurs_select on public.collaborateurs for select to authenticated
   using (
-    id = public.auth_collaborateur_id()
+    id = any(public.auth_collaborateur_ids())
     or public.auth_peut_saisir_pour(id)          -- collègues délégués (dropdown de saisie)
     or public.responsable_sees_collaborateur(id)
   );
@@ -188,7 +201,7 @@ create policy collaborateurs_delete on public.collaborateurs for delete to authe
 drop policy if exists contrats_select on public.contrats;
 create policy contrats_select on public.contrats for select to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
@@ -206,7 +219,7 @@ create policy contrats_write on public.contrats for all to authenticated
 drop policy if exists delegations_select on public.delegations_saisie;
 create policy delegations_select on public.delegations_saisie for select to authenticated
   using (
-    delegant_collaborateur_id = public.auth_collaborateur_id()
+    delegant_collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(delegant_collaborateur_id)
     or public.responsable_sees_collaborateur(cible_collaborateur_id)
   );
@@ -231,7 +244,7 @@ create policy delegations_write on public.delegations_saisie for all to authenti
 drop policy if exists saisies_select on public.saisies;
 create policy saisies_select on public.saisies for select to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
@@ -239,7 +252,7 @@ create policy saisies_select on public.saisies for select to authenticated
 drop policy if exists saisies_insert on public.saisies;
 create policy saisies_insert on public.saisies for insert to authenticated
   with check (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
@@ -247,12 +260,12 @@ create policy saisies_insert on public.saisies for insert to authenticated
 drop policy if exists saisies_update on public.saisies;
 create policy saisies_update on public.saisies for update to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   )
   with check (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.auth_peut_saisir_pour(collaborateur_id)
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
@@ -260,7 +273,7 @@ create policy saisies_update on public.saisies for update to authenticated
 drop policy if exists saisies_delete on public.saisies;
 create policy saisies_delete on public.saisies for delete to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 
@@ -269,32 +282,32 @@ create policy saisies_delete on public.saisies for delete to authenticated
 drop policy if exists conges_select on public.conges;
 create policy conges_select on public.conges for select to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 
 drop policy if exists conges_insert on public.conges;
 create policy conges_insert on public.conges for insert to authenticated
   with check (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 
 drop policy if exists conges_update on public.conges;
 create policy conges_update on public.conges for update to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(collaborateur_id)
   )
   with check (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 
 drop policy if exists conges_delete on public.conges;
 create policy conges_delete on public.conges for delete to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 
@@ -303,7 +316,7 @@ create policy conges_delete on public.conges for delete to authenticated
 drop policy if exists soldes_select on public.soldes;
 create policy soldes_select on public.soldes for select to authenticated
   using (
-    collaborateur_id = public.auth_collaborateur_id()
+    collaborateur_id = any(public.auth_collaborateur_ids())
     or public.responsable_sees_collaborateur(collaborateur_id)
   );
 drop policy if exists soldes_write on public.soldes;

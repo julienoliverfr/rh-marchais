@@ -21,7 +21,11 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   identifiant text not null,                       -- e-mail / login affiché
   role text not null check (role in ('employe', 'responsable')),
-  collaborateur_id uuid,                           -- lien employé -> collaborateur
+  collaborateur_id uuid,                           -- lien employé -> collaborateur (contrat principal)
+  -- Contrats SUPPLÉMENTAIRES de la même personne (cumul de deux mi-temps sur
+  -- des activités différentes). Chaque contrat garde son solde de congés et son
+  -- seuil d'heures sup ; seule la CONNEXION est mutualisée.
+  collaborateurs_secondaires uuid[],
   nom_affichage text not null,
   -- Périmètre d'un responsable, par famille (liste d'UUID de familles). NULL ou
   -- tableau vide = accès à TOUTES les familles (responsable-admin, ex. Sophie).

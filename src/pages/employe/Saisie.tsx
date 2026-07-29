@@ -14,14 +14,31 @@ export default function Saisie() {
   const [nbEnregistrees, setNbEnregistrees] = useState(0)
   const [derniere, setDerniere] = useState<string | null>(null)
 
-  const collaborateur = useMemo(
-    () => collaborateurs.find((c) => c.id === session?.collaborateurId),
+  // Contrats de la personne. Une même personne peut en cumuler deux (deux
+  // mi-temps) : elle choisit alors sur quel contrat elle saisit sa journée.
+  // Chaque contrat garde son seuil d'heures sup et son solde de congés.
+  const mesContrats = useMemo(
+    () =>
+      (session?.collaborateurIds ?? []).flatMap((id) => {
+        const c = collaborateurs.find((x) => x.id === id)
+        return c ? [c] : []
+      }),
     [collaborateurs, session],
+  )
+  const [contratId, setContratId] = useState<string | null>(null)
+  const collaborateur = useMemo(
+    () =>
+      mesContrats.find((c) => c.id === contratId) ??
+      mesContrats.find((c) => c.id === session?.collaborateurId) ??
+      mesContrats[0],
+    [mesContrats, contratId, session],
   )
   const famille = useMemo(
     () => familles.find((f) => f.id === collaborateur?.familleId),
     [familles, collaborateur],
   )
+  const equipeDe = (c: (typeof mesContrats)[number]) =>
+    familles.find((f) => f.id === c.familleId)?.nom ?? '?'
 
   if (!collaborateur || !famille) {
     return (
@@ -36,6 +53,33 @@ export default function Saisie() {
       <h2 className="section-title" style={{ marginTop: 0 }}>
         Saisie des heures
       </h2>
+
+      {/* Sélecteur affiché UNIQUEMENT si la personne a plusieurs contrats :
+          pour tous les autres, l'écran est inchangé. */}
+      {mesContrats.length > 1 && (
+        <div className="card">
+          <div className="form-row">
+            <label htmlFor="contrat">Pour quel contrat ?</label>
+            <select
+              id="contrat"
+              value={collaborateur.id}
+              onChange={(e) => setContratId(e.target.value)}
+            >
+              {mesContrats.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {equipeDe(c)} — {c.contrat.base} {c.contrat.unite === 'heures' ? 'h' : 'j'}
+                </option>
+              ))}
+            </select>
+            <p className="muted" style={{ fontSize: '0.8rem' }}>
+              Vous avez {mesContrats.length} contrats. Choisissez celui sur lequel
+              vous avez travaillé : les heures et les congés sont comptés
+              séparément pour chacun.
+            </p>
+          </div>
+        </div>
+      )}
+
       <p className="muted">
         Équipe <strong>{famille.nom}</strong> —{' '}
         {famille.modeSaisie === 'journee_continue' ? (

@@ -31,6 +31,8 @@ interface Draft {
   motDePasse: string
   role: Role
   collaborateurId: string // '' = aucun
+  // Contrats SUPPLEMENTAIRES rattachés au même compte (cumul de mi-temps).
+  collaborateursSecondaires: string[]
   nomAffichage: string
 }
 
@@ -65,6 +67,7 @@ export default function Utilisateurs() {
       motDePasse: '',
       role: 'employe',
       collaborateurId: '',
+      collaborateursSecondaires: [],
       nomAffichage: '',
     }
   }
@@ -78,6 +81,7 @@ export default function Utilisateurs() {
       motDePasse: '',
       role: c.role,
       collaborateurId: c.collaborateurId ?? '',
+      collaborateursSecondaires: c.collaborateursSecondaires ?? [],
       nomAffichage: c.nomAffichage,
     }
   }
@@ -127,6 +131,10 @@ export default function Utilisateurs() {
           draft.role === 'employe' && draft.collaborateurId
             ? draft.collaborateurId
             : undefined,
+        collaborateursSecondaires:
+          draft.role === 'employe' && draft.collaborateursSecondaires.length > 0
+            ? draft.collaborateursSecondaires
+            : undefined,
         nomAffichage: defautNomAffichage(draft),
       }
       // 1) Mise à jour du profil (chemin « édition » existant de saveCompte).
@@ -166,6 +174,10 @@ export default function Utilisateurs() {
       collaborateurId:
         draft.role === 'employe' && draft.collaborateurId
           ? draft.collaborateurId
+          : undefined,
+      collaborateursSecondaires:
+        draft.role === 'employe' && draft.collaborateursSecondaires.length > 0
+          ? draft.collaborateursSecondaires
           : undefined,
       nomAffichage: defautNomAffichage(draft),
     }
@@ -385,6 +397,47 @@ export default function Utilisateurs() {
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+            {/* CUMUL DE CONTRATS : une même personne peut avoir deux contrats
+                (deux mi-temps). On rattache alors les deux au MÊME compte : une
+                seule connexion, mais chaque contrat garde son solde de congés et
+                son seuil d'heures supplémentaires. */}
+            {draft.role === 'employe' && draft.collaborateurId && (
+              <div className="form-row">
+                <label>Autres contrats de cette personne</label>
+                <div
+                  className="delegation-list"
+                  role="group"
+                  aria-label="Autres contrats rattachés"
+                >
+                  {collaborateurs
+                    .filter((c) => c.id !== draft.collaborateurId)
+                    .map((c) => (
+                      <label key={c.id} className="delegation-item">
+                        <input
+                          type="checkbox"
+                          checked={draft.collaborateursSecondaires.includes(c.id)}
+                          onChange={(e) =>
+                            setDraft({
+                              ...draft,
+                              collaborateursSecondaires: e.target.checked
+                                ? [...draft.collaborateursSecondaires, c.id]
+                                : draft.collaborateursSecondaires.filter(
+                                    (x) => x !== c.id,
+                                  ),
+                            })
+                          }
+                        />
+                        {c.prenom} {c.nom}
+                      </label>
+                    ))}
+                </div>
+                <p className="muted" style={{ fontSize: '0.8rem' }}>
+                  À n'utiliser que si la personne occupe <strong>plusieurs
+                  contrats</strong> chez vous. Elle choisira son contrat au
+                  moment de saisir ses heures.
+                </p>
               </div>
             )}
             <div className="form-row">

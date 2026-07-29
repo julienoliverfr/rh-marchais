@@ -223,6 +223,7 @@ interface ProfileRow {
   identifiant: string
   role: Compte['role']
   collaborateur_id: string | null
+  collaborateurs_secondaires: string[] | null
   nom_affichage: string
 }
 
@@ -511,6 +512,7 @@ function profileToCompte(r: ProfileRow): Compte {
     motDePasse: '',
     role: r.role,
     collaborateurId: r.collaborateur_id ?? undefined,
+    collaborateursSecondaires: r.collaborateurs_secondaires ?? undefined,
     nomAffichage: r.nom_affichage,
   }
 }
@@ -931,6 +933,7 @@ export class SupabaseRepository implements Repository {
           identifiant: compte.identifiant,
           role: compte.role,
           collaborateur_id: compte.collaborateurId ?? null,
+          collaborateurs_secondaires: compte.collaborateursSecondaires ?? null,
           nom_affichage: compte.nomAffichage,
         },
         'enregistrement profil',

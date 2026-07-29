@@ -14,6 +14,7 @@ import { useToast } from '../../components/Toast'
 export default function MesConges() {
   const session = useAuthStore((s) => s.session)
   const collaborateurs = useDataStore((s) => s.collaborateurs)
+  const familles = useDataStore((s) => s.familles)
   const conges = useDataStore((s) => s.conges)
   const politiques = useDataStore((s) => s.politiques)
   // Types d'absence paramétrables (Administration) : alimentent le menu déroulant.
@@ -23,10 +24,26 @@ export default function MesConges() {
   const creerDemandeConge = useDataStore((s) => s.creerDemandeConge)
   const toast = useToast()
 
-  const collaborateur = useMemo(
-    () => collaborateurs.find((c) => c.id === session?.collaborateurId),
+  // Contrats de la personne (cumul de mi-temps possible). Les congés sont
+  // acquis et décomptés PAR CONTRAT : elle choisit lequel est concerné.
+  const mesContrats = useMemo(
+    () =>
+      (session?.collaborateurIds ?? []).flatMap((id) => {
+        const c = collaborateurs.find((x) => x.id === id)
+        return c ? [c] : []
+      }),
     [collaborateurs, session],
   )
+  const [contratId, setContratId] = useState<string | null>(null)
+  const collaborateur = useMemo(
+    () =>
+      mesContrats.find((c) => c.id === contratId) ??
+      mesContrats.find((c) => c.id === session?.collaborateurId) ??
+      mesContrats[0],
+    [mesContrats, contratId, session],
+  )
+  const equipeNomDe = (c: (typeof mesContrats)[number]) =>
+    familles.find((f) => f.id === c.familleId)?.nom ?? '?'
 
   // Libellé lisible d'un type (config admin, repli sur les libellés du domaine).
   const labelDe = (code: CongeType): string =>
@@ -103,6 +120,32 @@ export default function MesConges() {
       <h2 className="section-title" style={{ marginTop: 0 }}>
         Mes congés
       </h2>
+
+      {/* Cumul de contrats : les congés s'acquièrent et se décomptent PAR
+          CONTRAT. Le sélecteur n'apparaît que pour les personnes concernées. */}
+      {mesContrats.length > 1 && (
+        <div className="card">
+          <div className="form-row">
+            <label htmlFor="contrat-conges">Pour quel contrat ?</label>
+            <select
+              id="contrat-conges"
+              value={collaborateur.id}
+              onChange={(e) => setContratId(e.target.value)}
+            >
+              {mesContrats.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {equipeNomDe(c)} — {c.contrat.base}{' '}
+                  {c.contrat.unite === 'heures' ? 'h' : 'j'}
+                </option>
+              ))}
+            </select>
+            <p className="muted" style={{ fontSize: '0.8rem' }}>
+              Vous avez {mesContrats.length} contrats : chacun a son propre solde
+              de congés.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ---------- Une carte de solde par type à solde ---------- */}
       {soldes.length === 0 ? (
