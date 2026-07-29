@@ -130,12 +130,22 @@ export default function ImportCollaborateurs() {
       sortable: true,
       sortAccessor: (r) => (r.valid ? 0 : 1),
       sortType: 'number',
-      render: (r) =>
-        r.valid ? (
-          <span className="badge validee">✅ Valide</span>
-        ) : (
-          <span className="badge refusee">❌ Erreur</span>
-        ),
+      render: (r) => (
+        <>
+          {r.valid ? (
+            <span className="badge validee">✅ Valide</span>
+          ) : (
+            <span className="badge refusee">❌ Erreur</span>
+          )}
+          {/* Signalements NON bloquants : la ligne s'importe, mais on attire
+              l'œil (ex. cumul de contrats vs faute de frappe sur l'identifiant). */}
+          {r.avertissements?.map((a, i) => (
+            <div key={i} className="muted" style={{ fontSize: '0.75rem' }}>
+              ⚠ {a}
+            </div>
+          ))}
+        </>
+      ),
     },
     {
       key: 'nom',
@@ -272,7 +282,12 @@ export default function ImportCollaborateurs() {
             </button>
             <button
               className="btn secondary"
-              onClick={() => downloadModeleXlsx(typesSolde)}
+              onClick={() =>
+                downloadModeleXlsx(typesSolde, {
+                  equipes: familles.map((f) => f.nom),
+                  modeles: modeles.map((m) => m.nom),
+                })
+              }
             >
               Télécharger le modèle (Excel)
             </button>

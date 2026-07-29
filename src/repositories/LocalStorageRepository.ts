@@ -330,15 +330,28 @@ export class LocalStorageRepository implements Repository {
 
       // Compte de connexion rattaché (rôle employé), sauf si la colonne
       // « Créer un compte » vaut « non » (collaborateur sans accès à l'appli).
+      // CUMUL DE CONTRATS : si le même identifiant revient sur plusieurs lignes,
+      // on ne crée qu'UN compte ; les fiches suivantes deviennent des contrats
+      // secondaires du même compte (une seule connexion pour la personne).
       if (row.creerCompte) {
-        nouveauxComptes.push({
-          id: genId('cpt'),
-          identifiant: row.identifiant,
-          motDePasse: row.motDePasse,
-          role: 'employe',
-          collaborateurId: collabId,
-          nomAffichage: `${row.prenom} ${row.nom}`,
-        })
+        const deja = nouveauxComptes.find(
+          (c) => c.identifiant === row.identifiant,
+        )
+        if (deja) {
+          deja.collaborateursSecondaires = [
+            ...(deja.collaborateursSecondaires ?? []),
+            collabId,
+          ]
+        } else {
+          nouveauxComptes.push({
+            id: genId('cpt'),
+            identifiant: row.identifiant,
+            motDePasse: row.motDePasse,
+            role: 'employe',
+            collaborateurId: collabId,
+            nomAffichage: `${row.prenom} ${row.nom}`,
+          })
+        }
       }
 
       // Solde initial PAR TYPE à solde → override d'allocation sur la période

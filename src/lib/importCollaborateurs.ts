@@ -92,18 +92,33 @@ const EXEMPLE_SOLDE: Partial<Record<CongeType, string>> = {
   rtt: '10',
 }
 
-// Ligne d'exemple fournie dans le fichier modèle.
-function exempleRow(typesSolde: TypeSoldeInfo[]): string[] {
+// Lignes d'exemple du fichier modèle.
+//
+// La 2e et la 3e montrent une personne qui CUMULE DEUX CONTRATS (deux
+// mi-temps) : même identifiant sur les deux lignes, une équipe et un modèle de
+// contrat différents. Chaque ligne crée sa fiche collaborateur ; la personne
+// n'aura qu'UNE connexion, et choisira son contrat au moment de saisir.
+function exempleRows(typesSolde: TypeSoldeInfo[]): string[][] {
+  const soldes = (part = 1) =>
+    typesSolde.map((t) => {
+      const v = EXEMPLE_SOLDE[t.code]
+      return v ? String(Number(v) * part) : ''
+    })
   return [
-    'Marchais',
-    'Camille',
-    'camille',
-    'Vignes',
-    'Vignes · CDI 35h',
-    '01/06/2026',
-    ...typesSolde.map((t) => EXEMPLE_SOLDE[t.code] ?? ''),
-    MOT_DE_PASSE_DEFAUT,
-    'oui',
+    // Cas courant : un salarié, un contrat.
+    [
+      'Marchais', 'Camille', 'camille', 'Vignes', 'Vignes · CDI 35h',
+      '01/06/2026', ...soldes(), MOT_DE_PASSE_DEFAUT, 'oui',
+    ],
+    // Cumul de contrats : MÊME identifiant, deux contrats à mi-temps.
+    [
+      'Dubois', 'Alex', 'alex', 'Vignes', 'Vignes · CDI 35h',
+      '01/09/2024', ...soldes(0.5), MOT_DE_PASSE_DEFAUT, 'oui',
+    ],
+    [
+      'Dubois', 'Alex', 'alex', 'Marchais', 'Marchais · CDI jour',
+      '01/03/2025', ...soldes(0.5), '', 'oui',
+    ],
   ]
 }
 
@@ -130,6 +145,10 @@ export interface RawImportRow {
 export interface ValidatedImportRow {
   raw: RawImportRow
   errors: string[]
+  // Signalements NON bloquants (ex. « 2 contrats pour cette personne ») : la
+  // ligne s'importe, mais l'administrateur doit pouvoir vérifier d'un coup
+  // d'œil qu'il ne s'agit pas d'une faute de frappe sur l'identifiant.
+  avertissements: string[]
   valid: boolean
   payload?: ImportCollaborateurRow
 }
@@ -422,6 +441,7 @@ export function validateImportRows(
 
   return rows.map((r) => {
     const errors: string[] = []
+    const avertissements: string[] = []
     const nom = r.nom.trim()
     const prenom = r.prenom.trim()
     const identifiant = r.identifiant.trim().toLowerCase()
@@ -445,7 +465,13 @@ export function validateImportRows(
       if (existing.has(idNu(identifiant))) {
         errors.push(`Identifiant « ${identifiant} » déjà utilisé en base.`)
       } else if ((counts.get(identifiant) ?? 0) > 1) {
-        errors.push(`Identifiant « ${identifiant} » en double dans le fichier.`)
+        // Un même identifiant sur PLUSIEURS lignes n'est PAS une erreur : c'est
+        // une personne qui cumule plusieurs contrats (deux mi-temps). Chaque
+        // ligne crée sa fiche collaborateur ; toutes sont rattachées au MÊME
+        // compte de connexion. On le SIGNALE pour écarter la faute de frappe.
+        avertissements.push(
+          `${counts.get(identifiant)} contrats pour cette personne (même identifiant).`,
+        )
       }
     }
 
@@ -496,7 +522,7 @@ export function validateImportRows(
           }
         : undefined
 
-    return { raw: r, errors, valid, payload }
+    return { raw: r, errors, avertissements, valid, payload }
   })
 }
 
@@ -527,7 +553,7 @@ function triggerDownload(blob: Blob, filename: string): void {
 export function downloadModeleCsv(typesSolde: TypeSoldeInfo[]): void {
   const rows: readonly string[][] = [
     buildImportHeaders(typesSolde),
-    exempleRow(typesSolde),
+    ...exempleRows(typesSolde),
   ]
   const content =
     '﻿' + rows.map((r) => r.map(csvField).join(';')).join('\r\n')
@@ -536,9 +562,18 @@ export function downloadModeleCsv(typesSolde: TypeSoldeInfo[]): void {
 }
 
 // Modèle Excel : une feuille « Modèle import », en-tête + ligne d'exemple.
-export function downloadModeleXlsx(typesSolde: TypeSoldeInfo[]): void {
+// Référentiels affichés dans la feuille « Valeurs autorisées » du modèle.
+export interface ReferentielsImport {
+  equipes: string[]
+  modeles: string[]
+}
+
+export function downloadModeleXlsx(
+  typesSolde: TypeSoldeInfo[],
+  referentiels?: ReferentielsImport,
+): void {
   const headers = buildImportHeaders(typesSolde)
-  const aoa: string[][] = [headers, exempleRow(typesSolde)]
+  const aoa: string[][] = [headers, ...exempleRows(typesSolde)]
   // Neutralise l'injection de formule sur toutes les cellules texte (les
   // libellés de type d'absence sont paramétrables donc potentiellement hostiles).
   const safeAoa = aoa.map((row) => row.map(neutralizeFormula))
@@ -546,5 +581,27 @@ export function downloadModeleXlsx(typesSolde: TypeSoldeInfo[]): void {
   ws['!cols'] = headers.map(() => ({ wch: 18 }))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Modèle import')
+
+  // Seconde feuille « Valeurs autorisées » : la liste EXACTE des équipes et des
+  // modèles de contrat existants, à recopier dans les colonnes correspondantes.
+  // (La bibliothèque Excel utilisée ne sait pas écrire de vraies listes
+  // déroulantes ; cette feuille en tient lieu — et sert de référence sûre,
+  // puisqu'un libellé inexact fait échouer la ligne à l'import.)
+  if (referentiels) {
+    const ref: string[][] = [
+      ['Équipes', 'Modèles de contrat'],
+      ...Array.from(
+        { length: Math.max(referentiels.equipes.length, referentiels.modeles.length) },
+        (_, i) => [referentiels.equipes[i] ?? '', referentiels.modeles[i] ?? ''],
+      ),
+      [],
+      ['Rappel : recopiez ces libellés à l’identique dans le modèle.'],
+      ['Deux contrats pour une même personne ? Deux lignes, MÊME identifiant.'],
+    ]
+    const wsRef = XLSX.utils.aoa_to_sheet(ref.map((r) => r.map(neutralizeFormula)))
+    wsRef['!cols'] = [{ wch: 28 }, { wch: 34 }]
+    XLSX.utils.book_append_sheet(wb, wsRef, 'Valeurs autorisées')
+  }
+
   XLSX.writeFile(wb, 'modele-import-collaborateurs.xlsx')
 }
