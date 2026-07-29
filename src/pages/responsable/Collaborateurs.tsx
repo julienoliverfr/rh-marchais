@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Collaborateur, CongeType, DecompteJours } from '../../types'
+import { estActif } from '../../types'
+import { todayISO } from '../../lib/dates'
 import { useDataStore } from '../../store/dataStore'
 import { quotasParTypeDe, typeASolde } from '../../lib/conges'
 import DataTable from '../../components/DataTable'
@@ -30,6 +32,8 @@ interface Draft {
   // Date d'entrée (ISO yyyy-mm-dd), '' si inconnue. Pilote le PRORATA d'acquisition
   // des congés et le calcul de l'ancienneté (voir lib/soldes.ts).
   dateDebut: string
+  // Date de sortie des effectifs, '' si toujours présent.
+  dateSortie: string
   // Quotas de congés PAR TYPE (jours/type). Un type absent = défaut politique.
   quotasParType: Partial<Record<CongeType, number>>
   // Liste des collaborateurs pour lesquels cette personne peut saisir.
@@ -93,6 +97,7 @@ export default function Collaborateurs() {
       seuilHebdo: m?.seuilHebdo ?? 35,
       decompteJours: m?.decompteJours ?? 'ouvres',
       dateDebut: '',
+      dateSortie: '',
       // Pré-rempli depuis le modèle (quotas par type).
       quotasParType: m ? { ...quotasParTypeDe(m) } : {},
       peutSaisirPour: [],
@@ -112,6 +117,7 @@ export default function Collaborateurs() {
       // Relue puis réécrite telle quelle : sans cela, une simple édition
       // EFFACERAIT la date d'entrée (et donc le prorata + l'ancienneté).
       dateDebut: c.contrat.dateDebut ?? '',
+      dateSortie: c.dateSortie ?? '',
       quotasParType: { ...quotasParTypeDe(c.contrat) },
       peutSaisirPour: c.peutSaisirPour ?? [],
     }
@@ -169,6 +175,7 @@ export default function Collaborateurs() {
       prenom: draft.prenom.trim(),
       nom: draft.nom.trim(),
       familleId: draft.familleId,
+      dateSortie: draft.dateSortie || undefined,
       contrat: {
         modeleId: draft.modeleId,
         unite: m?.unite ?? 'heures',
@@ -197,7 +204,20 @@ export default function Collaborateurs() {
       label: 'Collaborateur',
       sortable: true,
       sortAccessor: (c) => `${c.nom} ${c.prenom}`,
-      render: (c) => `${c.prenom} ${c.nom}`,
+      render: (c) => (
+        <>
+          {c.prenom} {c.nom}
+          {!estActif(c, todayISO()) && (
+            <span
+              className="badge refusee"
+              style={{ marginLeft: '0.4rem' }}
+              title={`Sorti des effectifs le ${c.dateSortie}`}
+            >
+              Sorti
+            </span>
+          )}
+        </>
+      ),
     },
     {
       key: 'famille',
@@ -269,8 +289,18 @@ export default function Collaborateurs() {
     },
   ]
 
-  // Facettes : Famille + Type de contrat (modèle).
+  // Facettes : Présence + Équipe + Type de contrat (modèle).
   const filters: FacetDef<Collaborateur>[] = [
+    {
+      key: 'presence',
+      label: 'Présence',
+      type: 'select',
+      options: [
+        { value: 'actif', label: 'Actifs' },
+        { value: 'sorti', label: 'Sortis' },
+      ],
+      accessor: (c) => (estActif(c, todayISO()) ? 'actif' : 'sorti'),
+    },
     {
       key: 'famille',
       label: 'Équipe',
@@ -428,7 +458,23 @@ export default function Collaborateurs() {
                 onChange={(e) => setDraft({ ...draft, dateDebut: e.target.value })}
               />
             </div>
+            <div className="form-row">
+              <label htmlFor="dateSortie">Date de sortie</label>
+              <input
+                id="dateSortie"
+                type="date"
+                value={draft.dateSortie}
+                onChange={(e) => setDraft({ ...draft, dateSortie: e.target.value })}
+              />
+            </div>
           </div>
+          {draft.dateSortie && (
+            <p className="muted" style={{ fontSize: '0.8rem', marginTop: '-0.25rem' }}>
+              À partir de cette date, ce collaborateur n'apparaîtra plus dans les
+              listes de saisie et de délégation. Son historique (heures, congés,
+              exports) reste <strong>intégralement conservé</strong>.
+            </p>
+          )}
           <p className="muted" style={{ fontSize: '0.8rem', marginTop: '-0.25rem' }}>
             {draft.dateDebut ? (
               <>
@@ -483,7 +529,8 @@ export default function Collaborateurs() {
                 aria-label="Autorisé à saisir pour"
               >
                 {collaborateurs
-                  .filter((c) => c.id !== draft.id)
+                  // On ne délègue pas pour quelqu'un qui a quitté l'entreprise.
+                  .filter((c) => c.id !== draft.id && estActif(c, todayISO()))
                   .map((c) => (
                     <label
                       key={c.id}

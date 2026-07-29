@@ -146,6 +146,13 @@ create policy conges_delete on public.conges for delete to authenticated
     or (collaborateur_id = public.auth_collaborateur_id() and statut = 'demandee')
   );
 
+-- ---------------------------------------------------------- collaborateurs ---
+-- On ne SUPPRIME jamais un collaborateur : ses saisies, congés et soldes
+-- partiraient en CASCADE (schema.sql), détruisant un historique de paie soumis
+-- à obligation de conservation. La sortie des effectifs se fait en renseignant
+-- `collaborateurs.date_sortie`. On retire donc la policy de suppression.
+drop policy if exists collaborateurs_delete on public.collaborateurs;
+
 -- --------------------------------------------------------------- audit_log ---
 -- L'AUTEUR n'est plus déclaratif : il est imposé depuis le jeton de session.
 -- Le journal redevient probant (on ne peut plus signer à la place d'autrui).

@@ -92,6 +92,7 @@ interface CollaborateurRow {
   prenom: string
   nom: string
   famille_id: string
+  date_sortie: string | null
 }
 
 interface ContratRow {
@@ -611,6 +612,7 @@ export class SupabaseRepository implements Repository {
       prenom: r.prenom,
       nom: r.nom,
       familleId: r.famille_id,
+      dateSortie: r.date_sortie ?? undefined,
       peutSaisirPour: ciblesParDelegant.get(r.id) ?? [],
       contrat:
         contratByCollab.get(r.id) ??
@@ -766,6 +768,7 @@ export class SupabaseRepository implements Repository {
         prenom: collaborateur.prenom,
         nom: collaborateur.nom,
         famille_id: collaborateur.familleId,
+        date_sortie: collaborateur.dateSortie ?? null,
       },
       'enregistrement collaborateur',
     )

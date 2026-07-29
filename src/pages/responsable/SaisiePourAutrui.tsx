@@ -2,12 +2,19 @@ import { useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useDataStore } from '../../store/dataStore'
 import SaisieForm from '../../components/SaisieForm'
+import { estActif } from '../../types'
+import { todayISO } from '../../lib/dates'
 
 // Responsable : saisir des heures pour le compte d'un collaborateur.
 export default function SaisiePourAutrui() {
   const session = useAuthStore((s) => s.session)
-  const collaborateurs = useDataStore((s) => s.collaborateurs)
+  const tousCollaborateurs = useDataStore((s) => s.collaborateurs)
   const familles = useDataStore((s) => s.familles)
+  // Saisie possible uniquement pour les collaborateurs PRÉSENTS.
+  const collaborateurs = useMemo(
+    () => tousCollaborateurs.filter((c) => estActif(c, todayISO())),
+    [tousCollaborateurs],
+  )
   const [collabId, setCollabId] = useState<string>(collaborateurs[0]?.id ?? '')
   const [done, setDone] = useState(false)
 

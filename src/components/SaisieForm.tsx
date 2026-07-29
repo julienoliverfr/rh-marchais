@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Collaborateur, Famille, Periode, Saisie } from '../types'
 import { useDataStore } from '../store/dataStore'
+import { useAuthStore } from '../store/authStore'
 import { isoDaysAgo, todayISO } from '../lib/dates'
 import {
   computeDemiJournees,
@@ -42,8 +43,12 @@ export default function SaisieForm({
   const corrigerSaisie = useDataStore((s) => s.corrigerSaisie)
   const toast = useToast()
   // Fenêtre de saisie rétroactive pilotée par les règles générales (Administration).
+  // Elle ne s'applique QU'AUX EMPLOYÉS : le responsable doit pouvoir régulariser
+  // une journée ancienne (oubli, absence, litige) sans être bloqué — sinon la
+  // journée ne serait jamais payée. La saisie garde son auteur (traçabilité).
+  const estResponsable = useAuthStore((s) => s.session?.role === 'responsable')
   const retroJours = useDataStore((s) => s.regles.saisieRetroJours)
-  const MIN_DATE = isoDaysAgo(retroJours)
+  const MIN_DATE = estResponsable ? '' : isoDaysAgo(retroJours)
   const isContinu = famille.modeSaisie === 'journee_continue'
 
   const [date, setDate] = useState(existing?.date ?? MAX_DATE)
@@ -76,7 +81,7 @@ export default function SaisieForm({
   // messages d'erreur sous les champs concernés.
   function validate(): boolean {
     let ok = true
-    if (date < MIN_DATE) {
+    if (MIN_DATE && date < MIN_DATE) {
       setDateError(
         `Saisie rétroactive limitée à ${retroJours} jours. Date minimale autorisée : ${MIN_DATE}.`,
       )
@@ -143,12 +148,17 @@ export default function SaisieForm({
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-row">
-        <label htmlFor="date">Date (rétroactif jusqu'à {retroJours} jours)</label>
+        <label htmlFor="date">
+          Date
+          {estResponsable
+            ? ' (aucune limite rétroactive)'
+            : ` (rétroactif jusqu'à ${retroJours} jours)`}
+        </label>
         <input
           id="date"
           type="date"
           value={date}
-          min={MIN_DATE}
+          min={MIN_DATE || undefined}
           max={MAX_DATE}
           aria-invalid={dateError ? true : undefined}
           aria-describedby={dateError ? 'date-err' : undefined}

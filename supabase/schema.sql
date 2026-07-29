@@ -63,6 +63,9 @@ create table if not exists public.collaborateurs (
   prenom text not null,
   nom text not null,
   famille_id uuid not null references public.familles (id) on delete restrict,
+  -- Sortie des effectifs. On ne supprime JAMAIS un collaborateur (l'historique
+  -- de paie doit être conservé) : on renseigne sa date de sortie.
+  date_sortie date,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

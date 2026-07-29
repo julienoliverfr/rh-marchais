@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useDataStore } from '../../store/dataStore'
 import SaisieForm from '../../components/SaisieForm'
+import { estActif } from '../../types'
+import { todayISO } from '../../lib/dates'
 
 // Employé délégué : saisir des heures pour un COLLÈGUE de sa liste autorisée.
 // Le périmètre est STRICTEMENT limité à `peutSaisirPour` du collaborateur
@@ -19,7 +21,8 @@ export default function SaisiePourCollegue() {
   )
   const autorises = useMemo(() => {
     const ids = new Set(moi?.peutSaisirPour ?? [])
-    return collaborateurs.filter((c) => ids.has(c.id))
+    // Un collègue sorti des effectifs disparaît de la liste de saisie.
+    return collaborateurs.filter((c) => ids.has(c.id) && estActif(c, todayISO()))
   }, [collaborateurs, moi])
 
   const [collabId, setCollabId] = useState<string>('')

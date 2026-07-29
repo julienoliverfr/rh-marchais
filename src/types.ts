@@ -93,6 +93,16 @@ export interface Collaborateur {
   // Collaborateurs). MIGRATION : les données historiques sans ce champ sont
   // interprétées comme une liste vide.
   peutSaisirPour?: string[]
+  // Date de SORTIE des effectifs (ISO yyyy-mm-dd). Absente = toujours présent.
+  // On ne SUPPRIME jamais un collaborateur : son historique (saisies, congés,
+  // exports) doit être conservé pour la paie. Une fois sorti, il disparaît des
+  // listes de saisie et de délégation, mais reste consultable et exportable.
+  dateSortie?: string
+}
+
+// Un collaborateur est-il présent à cette date ? (défaut : aujourd'hui)
+export function estActif(c: Collaborateur, dateRef: string): boolean {
+  return !c.dateSortie || c.dateSortie >= dateRef
 }
 
 // Compte de connexion (auth mockée)
