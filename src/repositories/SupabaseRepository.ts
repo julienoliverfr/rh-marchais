@@ -1051,7 +1051,36 @@ export class SupabaseRepository implements Repository {
     return [...this.saisies]
   }
 
+  // Garde-fous « une journée = une saisie, et pas de cumul avec un congé ».
+  // Voir LocalStorageRepository.verifierJourneeLibre (même règle métier).
+  private verifierJourneeLibre(saisie: Saisie): void {
+    const doublon = this.saisies.find(
+      (s) =>
+        s.id !== saisie.id &&
+        s.collaborateurId === saisie.collaborateurId &&
+        s.date === saisie.date,
+    )
+    if (doublon) {
+      throw new Error(
+        'Une saisie existe déjà pour ce collaborateur à cette date : modifiez-la au lieu d’en créer une seconde.',
+      )
+    }
+    const congeValide = this.conges.find(
+      (c) =>
+        c.collaborateurId === saisie.collaborateurId &&
+        c.statut === 'validee' &&
+        saisie.date >= c.dateDebut &&
+        saisie.date <= c.dateFin,
+    )
+    if (congeValide) {
+      throw new Error(
+        'Un congé validé couvre cette date : impossible d’y saisir des heures (la journée serait comptée deux fois).',
+      )
+    }
+  }
+
   saveSaisie(saisie: Saisie): void {
+    this.verifierJourneeLibre(saisie)
     const idx = this.saisies.findIndex((s) => s.id === saisie.id)
     if (idx >= 0) this.saisies[idx] = saisie
     else this.saisies.push(saisie)
@@ -1251,6 +1280,18 @@ export class SupabaseRepository implements Repository {
   validerConge(id: string, parUserId: string): void {
     const conge = this.requireConge(id)
     if (conge.statut !== 'demandee') throw new Error('Cette demande a déjà été traitée.')
+    // Symétrique du garde-fou de saisie (journée payée deux fois).
+    const conflit = this.saisies.find(
+      (s) =>
+        s.collaborateurId === conge.collaborateurId &&
+        s.date >= conge.dateDebut &&
+        s.date <= conge.dateFin,
+    )
+    if (conflit) {
+      throw new Error(
+        `Des heures sont déjà saisies le ${conflit.date} sur cette période : supprimez-les ou ajustez les dates du congé avant de valider.`,
+      )
+    }
     this.saveConge({
       ...conge,
       statut: 'validee',
@@ -1463,12 +1504,13 @@ export class SupabaseRepository implements Repository {
     return perimetre === SupabaseRepository.PERIMETRE_TOUTES || c.familleId === perimetre
   }
 
-  private saisiesRetenues(collaborateurId: string, periode: string): Saisie[] {
+  // Toutes les saisies retenues (tous mois) : nécessaire pour reconstituer les
+  // SEMAINES COMPLÈTES du calcul des heures supplémentaires.
+  private saisiesRetenuesToutes(collaborateurId: string): Saisie[] {
     return this.saisies.filter(
       (s) =>
         s.collaborateurId === collaborateurId &&
-        (s.statut === 'validee' || s.statut === 'verrouillee') &&
-        isInMonthKey(s.date, periode),
+        (s.statut === 'validee' || s.statut === 'verrouillee'),
     )
   }
 
@@ -1485,10 +1527,10 @@ export class SupabaseRepository implements Repository {
 
     const lignes: RecapLigne[] = []
     for (const c of collaborateurs) {
-      const saisiesMois = this.saisiesRetenues(c.id, periode)
       const { supMin, normalMin } = repartitionMoisMinutes(
-        saisiesMois,
+        this.saisiesRetenuesToutes(c.id),
         c.contrat.seuilHebdo || seuilDefaut,
+        periode,
       )
       const heuresNormales = minutesToDecimalHours(normalMin)
       const heuresSup = minutesToDecimalHours(supMin)

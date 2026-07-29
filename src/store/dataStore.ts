@@ -87,7 +87,8 @@ interface DataState {
   saveJourFerie: (jour: JourFerie) => void
   deleteJourFerie: (date: string) => void
 
-  saveSaisie: (saisie: Saisie) => void
+  // Peut échouer (doublon de journée, congé validé sur la date) → ActionResult.
+  saveSaisie: (saisie: Saisie) => ActionResult
   deleteSaisie: (id: string) => void
 
   // Workflow de validation des saisies (Étape 2)
@@ -289,10 +290,7 @@ export const useDataStore = create<DataState>((set, get) => {
       set({ joursFeries: repository.getJoursFeries(), soldesTick: get().soldesTick + 1 })
     },
 
-    saveSaisie: (saisie) => {
-      repository.saveSaisie(saisie)
-      syncTx()
-    },
+    saveSaisie: (saisie) => run(() => repository.saveSaisie(saisie)),
 
     deleteSaisie: (id) => {
       repository.deleteSaisie(id)

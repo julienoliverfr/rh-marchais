@@ -130,7 +130,11 @@ export default function SaisieForm({
       }
       toast.success('Saisie corrigée (repassée « en attente »).')
     } else {
-      saveSaisie(saisie)
+      const res = saveSaisie(saisie)
+      if (!res.ok) {
+        toast.error(res.error ?? 'Enregistrement impossible.')
+        return
+      }
       toast.success('Saisie enregistrée (statut « en attente »).')
     }
     onSaved()

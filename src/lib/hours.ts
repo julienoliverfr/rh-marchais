@@ -115,25 +115,46 @@ export function heuresSupMinutes(totalMinutesSemaine: number, contrat: Contrat):
 // pour chaque semaine chevauchant le mois, sup = max(0, total_semaine - seuil),
 // puis on somme sur le mois. normales = total_mois - sup_mois. Sans majoration.
 export function repartitionMoisMinutes(
-  saisiesMois: Saisie[],
+  // TOUTES les saisies retenues du collaborateur (pas seulement celles du mois) :
+  // indispensable pour reconstituer les semaines COMPLÈTES.
+  toutesSaisies: Saisie[],
   seuilHebdo: number,
+  moisKey: string, // 'AAAA-MM' du mois exporté
 ): { totalMin: number; supMin: number; normalMin: number } {
-  const totalMin = saisiesMois.reduce((acc, s) => acc + s.totalMinutes, 0)
   const seuilMin = seuilHebdo * 60
 
-  const parSemaine = new Map<string, number>()
-  for (const s of saisiesMois) {
-    const lundi = startOfWeek(new Date(s.date + 'T12:00:00'))
-      .toISOString()
-      .slice(0, 10)
-    parSemaine.set(lundi, (parSemaine.get(lundi) ?? 0) + s.totalMinutes)
+  // Regroupement par semaine ISO, en distinguant ce qui appartient au mois.
+  // Auparavant seules les saisies DU MOIS étaient vues : une semaine coupée par
+  // un changement de mois formait deux demi-semaines restant chacune sous le
+  // seuil → les heures supplémentaires disparaissaient purement et simplement.
+  const parSemaine = new Map<string, { total: number; dansLeMois: number }>()
+  for (const s of toutesSaisies) {
+    const lundi = isoLocalDate(startOfWeek(new Date(s.date + 'T12:00:00')))
+    const acc = parSemaine.get(lundi) ?? { total: 0, dansLeMois: 0 }
+    acc.total += s.totalMinutes
+    if (s.date.slice(0, 7) === moisKey) acc.dansLeMois += s.totalMinutes
+    parSemaine.set(lundi, acc)
   }
 
+  let totalMin = 0
   let supMin = 0
-  for (const totalSemaine of parSemaine.values()) {
-    supMin += Math.max(0, totalSemaine - seuilMin)
+  for (const { total, dansLeMois } of parSemaine.values()) {
+    totalMin += dansLeMois
+    if (dansLeMois <= 0 || total <= 0) continue
+    // Heures sup de la semaine ENTIÈRE, puis part revenant à ce mois au prorata
+    // des minutes réellement effectuées dans le mois (semaine à cheval).
+    const supSemaine = Math.max(0, total - seuilMin)
+    supMin += (supSemaine * dansLeMois) / total
   }
+  supMin = Math.round(supMin)
   return { totalMin, supMin, normalMin: totalMin - supMin }
+}
+
+// yyyy-mm-dd depuis les composants LOCAUX (toISOString décalerait d'un jour
+// selon le fuseau, ce qui déplacerait le lundi de référence de la semaine).
+function isoLocalDate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
 // Convertit des minutes en heures décimales arrondies à 2 décimales.

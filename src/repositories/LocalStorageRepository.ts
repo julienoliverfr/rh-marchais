@@ -457,11 +457,42 @@ export class LocalStorageRepository implements Repository {
   }
 
   saveSaisie(saisie: Saisie): void {
+    this.verifierJourneeLibre(saisie)
     const list = this.getSaisies()
     const idx = list.findIndex((s) => s.id === saisie.id)
     if (idx >= 0) list[idx] = saisie
     else list.push(saisie)
     write(KEYS.saisies, list)
+  }
+
+  // Garde-fous « une journée = une saisie, et pas de cumul avec un congé ».
+  // Sans eux, deux écrans (employé / responsable / délégué) pouvaient créer
+  // deux saisies le même jour (heures doublées, seuil d'heures sup franchi à
+  // tort), et une journée pouvait être payée deux fois (absence + heures).
+  private verifierJourneeLibre(saisie: Saisie): void {
+    const doublon = this.getSaisies().find(
+      (s) =>
+        s.id !== saisie.id &&
+        s.collaborateurId === saisie.collaborateurId &&
+        s.date === saisie.date,
+    )
+    if (doublon) {
+      throw new Error(
+        'Une saisie existe déjà pour ce collaborateur à cette date : modifiez-la au lieu d’en créer une seconde.',
+      )
+    }
+    const congeValide = this.getConges().find(
+      (c) =>
+        c.collaborateurId === saisie.collaborateurId &&
+        c.statut === 'validee' &&
+        saisie.date >= c.dateDebut &&
+        saisie.date <= c.dateFin,
+    )
+    if (congeValide) {
+      throw new Error(
+        'Un congé validé couvre cette date : impossible d’y saisir des heures (la journée serait comptée deux fois).',
+      )
+    }
   }
 
   deleteSaisie(id: string): void {
@@ -682,6 +713,19 @@ export class LocalStorageRepository implements Repository {
     // Cas limite : pas de double traitement.
     if (conge.statut !== 'demandee') {
       throw new Error('Cette demande a déjà été traitée.')
+    }
+    // Symétrique du garde-fou de saisie : refuser de valider un congé qui
+    // recouvre des heures déjà saisies (la journée serait payée deux fois).
+    const conflit = this.getSaisies().find(
+      (s) =>
+        s.collaborateurId === conge.collaborateurId &&
+        s.date >= conge.dateDebut &&
+        s.date <= conge.dateFin,
+    )
+    if (conflit) {
+      throw new Error(
+        `Des heures sont déjà saisies le ${conflit.date} sur cette période : supprimez-les ou ajustez les dates du congé avant de valider.`,
+      )
     }
     const maj: Conge = {
       ...conge,
@@ -944,12 +988,13 @@ export class LocalStorageRepository implements Repository {
   // Saisies retenues pour l'agrégation d'un collaborateur sur `periode`
   // (mois 'YYYY-MM') : uniquement les statuts figés (`validee`/`verrouillee`),
   // jamais `en_attente`/`refusee`.
-  private saisiesRetenues(collaborateurId: string, periode: string): Saisie[] {
+  // Toutes les saisies retenues (tous mois confondus) : nécessaire pour
+  // reconstituer les SEMAINES COMPLÈTES du calcul des heures supplémentaires.
+  private saisiesRetenuesToutes(collaborateurId: string): Saisie[] {
     return this.getSaisies().filter(
       (s) =>
         s.collaborateurId === collaborateurId &&
-        (s.statut === 'validee' || s.statut === 'verrouillee') &&
-        isInMonthKey(s.date, periode),
+        (s.statut === 'validee' || s.statut === 'verrouillee'),
     )
   }
 
@@ -975,10 +1020,10 @@ export class LocalStorageRepository implements Repository {
     for (const c of collaborateurs) {
       // Heures : total du mois puis répartition normales/sup PAR SEMAINE ISO
       // (sans majoration), via lib/hours.ts pour ne pas réinventer le cumul.
-      const saisiesMois = this.saisiesRetenues(c.id, periode)
       const { supMin, normalMin } = repartitionMoisMinutes(
-        saisiesMois,
+        this.saisiesRetenuesToutes(c.id),
         c.contrat.seuilHebdo || seuilDefaut,
+        periode,
       )
       const heuresNormales = minutesToDecimalHours(normalMin)
       const heuresSup = minutesToDecimalHours(supMin)
