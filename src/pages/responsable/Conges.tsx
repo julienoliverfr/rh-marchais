@@ -7,6 +7,7 @@ import { formatDateFr, formatDateFrNum, todayISO } from '../../lib/dates'
 import { POLITIQUE_DEFAUT, apercuPolitique, periodePour } from '../../lib/soldes'
 import DataTable from '../../components/DataTable'
 import type { ColumnDef, FacetDef } from '../../components/DataTable'
+import CongeBadge from '../../components/CongeBadge'
 import FieldError from '../../components/FieldError'
 import { useToast } from '../../components/Toast'
 import { useConfirm } from '../../components/ConfirmDialog'
@@ -29,6 +30,7 @@ export default function Conges() {
   const validerConge = useDataStore((s) => s.validerConge)
   const refuserConge = useDataStore((s) => s.refuserConge)
   const ajusterJoursConge = useDataStore((s) => s.ajusterJoursConge)
+  const annulerConge = useDataStore((s) => s.annulerConge)
   const setAllocation = useDataStore((s) => s.setAllocation)
   const deleteAllocation = useDataStore((s) => s.deleteAllocation)
   const toast = useToast()
@@ -43,6 +45,10 @@ export default function Conges() {
   const [ajustJours, setAjustJours] = useState('')
   const [ajustMotif, setAjustMotif] = useState('')
   const [ajustError, setAjustError] = useState<string | null>(null)
+  // Annulation d'un congé validé.
+  const [annulId, setAnnulId] = useState<string | null>(null)
+  const [annulMotif, setAnnulMotif] = useState('')
+  const [annulError, setAnnulError] = useState<string | null>(null)
 
   // Types à solde disponibles (sélecteur de la section « Soldes »).
   const typesSolde = useMemo(
@@ -86,6 +92,11 @@ export default function Conges() {
     () => conges.filter((c) => c.statut === 'demandee'),
     [conges],
   )
+  // Historique : tout ce qui n'est plus « à traiter » (validée/refusée/annulée).
+  const traitees = useMemo(
+    () => conges.filter((c) => c.statut !== 'demandee'),
+    [conges],
+  )
 
   // Nom de la famille d'un congé (pour facette + recherche).
   const familleNomDe = (c: Conge): string => {
@@ -126,6 +137,28 @@ export default function Conges() {
       toast.success('Congé refusé.')
     } else {
       setRefusError(res.error ?? 'Refus impossible.')
+    }
+  }
+
+  function startAnnul(c: Conge) {
+    setAnnulId(c.id)
+    setAnnulMotif('')
+    setAnnulError(null)
+  }
+
+  function confirmAnnul() {
+    if (!annulId) return
+    if (!annulMotif.trim()) {
+      setAnnulError('Le motif est obligatoire (il est enregistré dans le journal).')
+      return
+    }
+    const res = annulerConge(annulId, parUser, annulMotif)
+    if (res.ok) {
+      setAnnulId(null)
+      setAnnulError(null)
+      toast.success('Congé annulé : les jours sont rendus au solde.')
+    } else {
+      setAnnulError(res.error ?? 'Annulation impossible.')
     }
   }
 
@@ -376,6 +409,128 @@ export default function Conges() {
     },
   ]
 
+  // ---- Historique : demandes DÉJÀ traitées (validée / refusée / annulée) ----
+  const historiqueColumns: ColumnDef<Conge>[] = [
+    {
+      key: 'collab',
+      label: 'Collaborateur',
+      sortable: true,
+      sortAccessor: (c) => collabNomDe(c),
+      render: (c) => collabNomDe(c),
+    },
+    {
+      key: 'periode',
+      label: 'Période',
+      sortable: true,
+      sortAccessor: (c) => c.dateDebut,
+      render: (c) =>
+        c.dateDebut === c.dateFin
+          ? formatDateFr(c.dateDebut)
+          : `${formatDateFr(c.dateDebut)} → ${formatDateFr(c.dateFin)}`,
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      sortable: true,
+      sortAccessor: (c) => labelDe(c.type),
+      render: (c) => labelDe(c.type),
+    },
+    {
+      key: 'jours',
+      label: 'Jours',
+      align: 'right',
+      sortable: true,
+      sortType: 'number',
+      sortAccessor: (c) => c.nbJours,
+      render: (c) => (c.statut === 'annulee' ? <s>{c.nbJours}</s> : c.nbJours),
+    },
+    {
+      key: 'statut',
+      label: 'Statut',
+      sortable: true,
+      sortAccessor: (c) => c.statut,
+      render: (c) => (
+        <>
+          <CongeBadge statut={c.statut} />
+          {c.refusMotif && (
+            <div className="muted" style={{ fontSize: '0.75rem' }}>
+              {c.refusMotif}
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'actions',
+      label: '',
+      // Seul un congé VALIDÉ peut être annulé (jours rendus au solde).
+      render: (c) =>
+        c.statut !== 'validee' ? null : (
+          <>
+            <button className="btn danger small" onClick={() => startAnnul(c)}>
+              Annuler
+            </button>
+            {annulId === c.id && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <input
+                  autoFocus
+                  placeholder="Motif de l'annulation (obligatoire)"
+                  value={annulMotif}
+                  onChange={(e) => {
+                    setAnnulMotif(e.target.value)
+                    if (annulError) setAnnulError(null)
+                  }}
+                />
+                <FieldError id={`annul-err-${c.id}`} message={annulError} />
+                <div className="btn-row" style={{ marginTop: '0.4rem' }}>
+                  <button className="btn danger small" onClick={confirmAnnul}>
+                    Confirmer l'annulation
+                  </button>
+                  <button
+                    className="btn secondary small"
+                    onClick={() => {
+                      setAnnulId(null)
+                      setAnnulError(null)
+                    }}
+                  >
+                    Retour
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ),
+    },
+  ]
+
+  const historiqueFilters: FacetDef<Conge>[] = [
+    {
+      key: 'statut',
+      label: 'Statut',
+      type: 'select',
+      options: [
+        { value: 'validee', label: 'Validée' },
+        { value: 'refusee', label: 'Refusée' },
+        { value: 'annulee', label: 'Annulée' },
+      ],
+      accessor: (c) => c.statut,
+    },
+    {
+      key: 'type',
+      label: "Type d'absence",
+      type: 'select',
+      options: typesAbsence.map((t) => ({ value: t.code, label: t.label })),
+      accessor: (c) => c.type,
+    },
+    {
+      key: 'famille',
+      label: 'Équipe',
+      type: 'select',
+      options: familles.map((f) => ({ value: f.nom, label: f.nom })),
+      accessor: (c) => familleNomDe(c),
+    },
+  ]
+
   const demandesFilters: FacetDef<Conge>[] = [
     {
       key: 'type',
@@ -550,6 +705,28 @@ export default function Conges() {
           }}
           defaultSort={{ key: 'periode', dir: 'asc' }}
           storageKey="conges-demandes"
+          emptyLabel="Aucune demande pour ce filtre."
+        />
+      )}
+
+      {/* ---------- Historique : toutes les demandes traitées ---------- */}
+      <h3 className="section-title">Historique des demandes ({traitees.length})</h3>
+      {traitees.length === 0 ? (
+        <div className="card">
+          <p className="muted">Aucune demande traitée pour le moment.</p>
+        </div>
+      ) : (
+        <DataTable
+          rows={traitees}
+          columns={historiqueColumns}
+          filters={historiqueFilters}
+          rowKey={(c) => c.id}
+          search={{
+            accessor: (c) => collabNomDe(c),
+            placeholder: 'Rechercher un collaborateur…',
+          }}
+          defaultSort={{ key: 'periode', dir: 'desc' }}
+          storageKey="conges-historique"
           emptyLabel="Aucune demande pour ce filtre."
         />
       )}

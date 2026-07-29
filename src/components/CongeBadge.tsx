@@ -7,6 +7,8 @@ const META: Record<StatutConge, { cls: string; label: string; icon: string }> = 
   demandee: { cls: 'en_attente', label: 'Demandée', icon: '⏳' },
   validee: { cls: 'validee', label: 'Validée', icon: '✓' },
   refusee: { cls: 'refusee', label: 'Refusée', icon: '✕' },
+  // Congé validé puis annulé : jours rendus au solde, trace conservée.
+  annulee: { cls: 'refusee', label: 'Annulée', icon: '⊘' },
 }
 
 export default function CongeBadge({ statut }: { statut: StatutConge }) {

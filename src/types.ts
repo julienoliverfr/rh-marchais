@@ -157,6 +157,8 @@ export type AuditAction =
   // Ajustement MANUEL du nombre de jours décompté (responsable). Toujours tracé :
   // l'audit conserve l'ancienne valeur, la nouvelle et le motif.
   | 'conge_jours_modifies'
+  // Annulation d'un congé DÉJÀ VALIDÉ (jours rendus au solde), motif obligatoire.
+  | 'conge_annulee'
   // Exports (Étape 4)
   | 'export'
 
@@ -189,7 +191,10 @@ export type CongeType = 'conge_paye' | 'maladie' | 'sans_solde' | 'rtt' | 'ancie
 // Positionnement d'une demi-journée (seulement si dateDebut === dateFin).
 export type DemiJour = 'aucune' | 'debut' | 'fin'
 
-export type StatutConge = 'demandee' | 'validee' | 'refusee'
+// `annulee` : congé VALIDÉ puis annulé (le salarié n'est finalement pas parti —
+// arrêt maladie, rappel…). Les jours sont rendus au solde et le congé sort des
+// décomptes ; la trace reste visible dans l'historique et le journal d'audit.
+export type StatutConge = 'demandee' | 'validee' | 'refusee' | 'annulee'
 
 export interface Conge {
   id: string

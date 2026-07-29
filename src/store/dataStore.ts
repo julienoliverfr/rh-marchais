@@ -101,6 +101,8 @@ interface DataState {
   creerDemandeConge: (data: DemandeCongeInput) => ActionResult
   validerConge: (id: string, parUserId: string) => ActionResult
   refuserConge: (id: string, parUserId: string, motif: string) => ActionResult
+  // Annulation d'un congé validé (jours rendus au solde), tracée dans l'audit.
+  annulerConge: (id: string, parUserId: string, motif: string) => ActionResult
   // Ajustement manuel du nombre de jours décompté (tracé dans l'audit).
   ajusterJoursConge: (
     id: string,
@@ -319,6 +321,9 @@ export const useDataStore = create<DataState>((set, get) => {
 
     refuserConge: (id, parUserId, motif) =>
       run(() => repository.refuserConge(id, parUserId, motif)),
+
+    annulerConge: (id, parUserId, motif) =>
+      run(() => repository.annulerConge(id, parUserId, motif)),
 
     ajusterJoursConge: (id, nbJours, parUserId, motif) =>
       run(() => repository.ajusterJoursConge(id, nbJours, parUserId, motif)),

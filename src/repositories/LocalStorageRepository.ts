@@ -759,6 +759,23 @@ export class LocalStorageRepository implements Repository {
     this.appendAudit('conge', id, 'conge_refusee', parUserId, motifClean)
   }
 
+  annulerConge(id: string, parUserId: string, motif: string): void {
+    const motifClean = motif.trim()
+    if (!motifClean) throw new Error('Un motif est obligatoire pour annuler un congé.')
+    const conge = this.requireConge(id)
+    if (conge.statut !== 'validee') {
+      throw new Error('Seul un congé validé peut être annulé.')
+    }
+    this.saveConge({ ...conge, statut: 'annulee', refusMotif: motifClean })
+    this.appendAudit(
+      'conge',
+      id,
+      'conge_annulee',
+      parUserId,
+      `${conge.nbJours} j rendus — ${motifClean}`,
+    )
+  }
+
   ajusterJoursConge(id: string, nbJours: number, parUserId: string, motif: string): void {
     const motifClean = motif.trim()
     if (!motifClean) throw new Error('Un motif est obligatoire pour ajuster les jours.')

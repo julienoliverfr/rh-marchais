@@ -157,7 +157,7 @@ create table if not exists public.conges (
   -- main par le responsable (NULL = aucun ajustement). L'ajustement est tracé
   -- dans audit_log (action 'conge_jours_modifies').
   nb_jours_calcule numeric,
-  statut text not null check (statut in ('demandee', 'validee', 'refusee')),
+  statut text not null check (statut in ('demandee', 'validee', 'refusee', 'annulee')),
   demande_par_user_id text not null,
   validee_par_user_id text,
   refus_motif text,
@@ -247,7 +247,7 @@ create table if not exists public.audit_log (
   cible_id uuid not null,
   action text not null check (action in (
     'validee', 'refusee', 'debloquee', 'modifiee',
-    'demande_conge', 'conge_validee', 'conge_refusee', 'conge_jours_modifies', 'export'
+    'demande_conge', 'conge_validee', 'conge_refusee', 'conge_jours_modifies', 'conge_annulee', 'export'
   )),
   par_user_id text not null,
   horodatage timestamptz not null default now(),

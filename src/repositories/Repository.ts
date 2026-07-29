@@ -154,6 +154,11 @@ export interface Repository {
   // Refuse une demande ; `motif` obligatoire. Erreur si déjà traitée.
   refuserConge(id: string, parUserId: string, motif: string): void
 
+  // Annule un congé DÉJÀ VALIDÉ (le salarié n'est finalement pas parti) :
+  // `validee` -> `annulee`. Les jours sortent du décompte et reviennent au
+  // solde. `motif` obligatoire ; l'opération est tracée dans le journal.
+  annulerConge(id: string, parUserId: string, motif: string): void
+
   // Ajuste MANUELLEMENT le nombre de jours décompté d'un congé (responsable).
   // Le calcul automatique d'origine est mémorisé dans `nbJoursCalcule` et
   // l'opération est TOUJOURS tracée dans le journal d'audit (ancienne valeur,

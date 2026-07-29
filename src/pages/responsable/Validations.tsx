@@ -25,6 +25,7 @@ const AUDIT_LABELS: Record<AuditAction, string> = {
   conge_validee: 'Congé validé',
   conge_refusee: 'Congé refusé',
   conge_jours_modifies: 'Jours de congé ajustés',
+  conge_annulee: 'Congé annulé',
   export: 'Export comptable',
 }
 
