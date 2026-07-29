@@ -69,6 +69,10 @@ setenv POSTGRES_PASSWORD   "$POSTGRES_PASSWORD"
 setenv JWT_SECRET          "$JWT_SECRET"
 setenv ANON_KEY            "$ANON_KEY"
 setenv SERVICE_ROLE_KEY    "$SERVICE_ROLE_KEY"
+# Inscription libre FERMÉE : sans cela, n'importe qui connaissant l'URL de
+# l'API peut se créer un compte (et obtenir un jeton « authenticated »).
+# Les comptes sont créés uniquement par le responsable, depuis l'application.
+setenv DISABLE_SIGNUP      "true"
 setenv DASHBOARD_USERNAME  "admin"
 setenv DASHBOARD_PASSWORD  "$DASHBOARD_PASSWORD"
 setenv SITE_URL            "http://$PUBLIC_IP"
