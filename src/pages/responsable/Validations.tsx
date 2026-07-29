@@ -15,6 +15,12 @@ import type { ColumnDef, FacetDef } from '../../components/DataTable'
 import FieldError from '../../components/FieldError'
 import { useToast } from '../../components/Toast'
 import { useConfirm } from '../../components/ConfirmDialog'
+import {
+  contratsParPersonne,
+  cumulSemainePersonne,
+  PLAFOND_HEBDO_HEURES,
+} from '../../lib/personnes'
+import type { CumulPersonne } from '../../lib/personnes'
 
 const AUDIT_LABELS: Record<AuditAction, string> = {
   validee: 'Validée',
@@ -42,6 +48,8 @@ interface Meta {
   famille?: Famille
   cumul: number
   sup: number
+  // Cumul hebdo TOUS CONTRATS (null si la personne n'en a qu'un).
+  cumulPersonne?: CumulPersonne | null
 }
 
 export default function Validations() {
@@ -49,6 +57,8 @@ export default function Validations() {
   const saisies = useDataStore((s) => s.saisies)
   const collaborateurs = useDataStore((s) => s.collaborateurs)
   const familles = useDataStore((s) => s.familles)
+  // Comptes : portent le lien entre les contrats d'une MÊME personne.
+  const comptes = useDataStore((s) => s.comptes)
   const validerSaisie = useDataStore((s) => s.validerSaisie)
   const refuserSaisie = useDataStore((s) => s.refuserSaisie)
   const debloquerSaisie = useDataStore((s) => s.debloquerSaisie)
@@ -90,6 +100,9 @@ export default function Validations() {
     [saisies],
   )
 
+  // Contrats appartenant à une même personne (cumul de mi-temps).
+  const groupesPersonne = useMemo(() => contratsParPersonne(comptes), [comptes])
+
   // Cumul semaine + heures sup pré-calculés par saisie (utilisés en tri + rendu).
   const metaById = useMemo(() => {
     const m = new Map<string, Meta>()
@@ -100,10 +113,15 @@ export default function Validations() {
         ? totalSemaineMinutesForDate(saisies, collab.id, s.date)
         : 0
       const sup = collab ? heuresSupMinutes(cumul, collab.contrat) : 0
-      m.set(s.id, { collab, famille, cumul, sup })
+      // Cumul TOUS CONTRATS de la personne : le plafond hebdomadaire légal
+      // s'apprécie sur la personne, pas sur le contrat.
+      const cumulPersonne = collab
+        ? cumulSemainePersonne(saisies, collab.id, s.date, groupesPersonne)
+        : null
+      m.set(s.id, { collab, famille, cumul, sup, cumulPersonne })
     }
     return m
-  }, [saisies, collabById, familleById])
+  }, [saisies, collabById, familleById, groupesPersonne])
 
   function metaOf(s: Saisie): Meta {
     return metaById.get(s.id) ?? { collab: undefined, famille: undefined, cumul: 0, sup: 0 }
@@ -297,6 +315,26 @@ export default function Validations() {
             {formatMinutes(m.cumul)}{' '}
             {m.sup > 0 && (
               <span className="badge en_attente">+{formatMinutes(m.sup)} sup</span>
+            )}
+            {/* Personne cumulant plusieurs contrats : on affiche le total TOUS
+                CONTRATS, seul pertinent au regard des durées maximales. */}
+            {m.cumulPersonne && (
+              <div style={{ fontSize: '0.75rem', marginTop: '0.15rem' }}>
+                {m.cumulPersonne.depassement ? (
+                  <span
+                    className="badge refusee"
+                    title={`Plafond légal : ${PLAFOND_HEBDO_HEURES} h par semaine, toutes activités confondues`}
+                  >
+                    ⚠ {formatMinutes(m.cumulPersonne.totalMinutes)} sur{' '}
+                    {m.cumulPersonne.nbContrats} contrats
+                  </span>
+                ) : (
+                  <span className="muted">
+                    {formatMinutes(m.cumulPersonne.totalMinutes)} sur{' '}
+                    {m.cumulPersonne.nbContrats} contrats
+                  </span>
+                )}
+              </div>
             )}
           </>
         )
