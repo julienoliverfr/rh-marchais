@@ -2,13 +2,17 @@ import { useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useDataStore } from '../../store/dataStore'
 import SaisieForm from '../../components/SaisieForm'
+import { formatDateFr } from '../../lib/dates'
 import HelpTip from '../../components/HelpTip'
 
 export default function Saisie() {
   const session = useAuthStore((s) => s.session)
   const collaborateurs = useDataStore((s) => s.collaborateurs)
   const familles = useDataStore((s) => s.familles)
-  const [done, setDone] = useState(false)
+  // Compteur d'enregistrements (remonte le formulaire à chaque fois) + date de
+  // la dernière journée saisie, pour une confirmation qui change à chaque envoi.
+  const [nbEnregistrees, setNbEnregistrees] = useState(0)
+  const [derniere, setDerniere] = useState<string | null>(null)
 
   const collaborateur = useMemo(
     () => collaborateurs.find((c) => c.id === session?.collaborateurId),
@@ -47,20 +51,27 @@ export default function Saisie() {
         )}
       </p>
 
-      {done && (
+      {derniere && (
         <div className="alert info">
-          Saisie enregistrée (statut « En attente »). Vous pouvez en ajouter une
-          autre.
+          Journée du <strong>{formatDateFr(derniere)}</strong> enregistrée — en
+          attente de validation. Vous pouvez en ajouter une autre.
         </div>
       )}
 
       <div className="card">
         <SaisieForm
-          key={done ? 'reset' : 'form'}
+          // Compteur (et non un booléen) : avec `done ? 'reset' : 'form'`, la
+          // clé ne changeait qu'AU PREMIER enregistrement — dès la 2e saisie
+          // d'affilée le formulaire gardait les valeurs précédentes et laissait
+          // croire que rien n'était parti.
+          key={nbEnregistrees}
           collaborateur={collaborateur}
           famille={famille}
           saisiPar={session!.identifiant}
-          onSaved={() => setDone(true)}
+          onSaved={(date) => {
+            setNbEnregistrees((n) => n + 1)
+            setDerniere(date)
+          }}
         />
       </div>
     </div>

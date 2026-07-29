@@ -18,7 +18,9 @@ interface Props {
   famille: Famille
   saisiPar: string // identifiant du compte qui saisit
   existing?: Saisie // édition d'une saisie existante
-  onSaved: () => void
+  // Reçoit la DATE enregistrée : l'écran appelant peut confirmer précisément
+  // (« Journée du mardi 14 juillet enregistrée ») plutôt qu'un message figé.
+  onSaved: (date: string) => void
   onCancel?: () => void
 }
 
@@ -161,13 +163,20 @@ export default function SaisieForm({
       }
     }
 
-    // Garde-fou de vraisemblance (le Code du travail plafonne à 10 h, 12 h par
-    // dérogation) : on alerte au-delà de 12 h plutôt que d'accepter l'absurde.
-    if (total > 12 * 60) {
-      return `Durée inhabituelle (${Math.round((total / 60) * 10) / 10} h) : vérifiez les heures saisies.`
+    // Au-delà de 12 h, on AVERTIT sans bloquer (voir `avertissement`) : une
+    // journée de vendanges de 12 h 30 est réelle et doit pouvoir être payée.
+    // Seules les valeurs IMPOSSIBLES (au-delà de 24 h) sont refusées.
+    if (total > 24 * 60) {
+      return `Durée impossible (${Math.round((total / 60) * 10) / 10} h) : vérifiez les heures saisies.`
     }
     return null
   }
+
+  // Journée longue : avertissement CONFIRMABLE. Le Code du travail plafonne en
+  // principe à 10 h (12 h par dérogation) ; c'est une alerte de vigilance, pas
+  // une interdiction technique — bloquer reviendrait à ne jamais payer la
+  // journée, ou à pousser le salarié à déclarer de faux horaires.
+  const journeeLongue = total > 12 * 60
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -219,7 +228,7 @@ export default function SaisieForm({
       }
       toast.success('Saisie enregistrée (statut « en attente »).')
     }
-    onSaved()
+    onSaved(saisie.date)
   }
 
   return (
@@ -379,6 +388,13 @@ export default function SaisieForm({
       <div className="alert info">
         Total calculé : <strong>{formatMinutes(total)}</strong>
       </div>
+      {journeeLongue && (
+        <div className="alert error">
+          <strong>Journée de plus de 12 h.</strong> Vérifiez vos horaires. Si
+          c'est exact, vous pouvez enregistrer : votre responsable en sera
+          informé.
+        </div>
+      )}
       <FieldError id="total-err" message={totalError} />
 
       <div className="btn-row">

@@ -47,7 +47,10 @@ export default function Layout() {
         </div>
       </header>
 
-      <nav className="nav">
+      {/* `nav-employe` : masquée sur mobile par CSS, la barre BASSE prenant le
+          relais. Sans cette distinction, l'employé avait DEUX barres de
+          navigation superposées sur téléphone (la moitié de l'écran perdue). */}
+      <nav className={isResponsable ? 'nav' : 'nav nav-employe'}>
         {!isResponsable && (
           <>
             <NavLink to="/" end>
@@ -106,7 +109,7 @@ export default function Layout() {
       <ContextualHelp />
 
       {/* Navigation basse (employé, mobile uniquement — masquée sur desktop). */}
-      {!isResponsable && <BottomNav />}
+      {!isResponsable && <BottomNav avecCollegue={peutSaisirPourCollegue} />}
     </div>
   )
 }

@@ -74,6 +74,10 @@ export default function Validations() {
     return m
   }, [familles])
 
+  // Lignes réellement AFFICHÉES dans le tableau « À valider » (après recherche
+  // et filtres) — remontées par DataTable, cible de l'action groupée.
+  const [aValiderVisibles, setAValiderVisibles] = useState<Saisie[]>([])
+
   const aValider = useMemo(
     () => saisies.filter((s) => s.statut === 'en_attente'),
     [saisies],
@@ -118,12 +122,23 @@ export default function Validations() {
     notify(validerSaisie(s.id, parUser), 'Saisie validée.')
   }
 
-  function handleToutValider() {
-    let ok = 0
-    for (const s of aValider) {
-      if (validerSaisie(s.id, parUser).ok) ok++
+  // Agit UNIQUEMENT sur les lignes visibles (après recherche et filtres).
+  // Auparavant la boucle parcourait toutes les saisies en attente : filtrer sur
+  // une équipe puis cliquer validait aussi celles des autres équipes.
+  async function handleToutValider() {
+    const cibles = aValiderVisibles
+    if (cibles.length === 0) return
+    const ok = await confirm({
+      title: `Valider ${cibles.length} saisie${cibles.length > 1 ? 's' : ''} ?`,
+      message: `Les ${cibles.length} saisie${cibles.length > 1 ? 's' : ''} actuellement affichée${cibles.length > 1 ? 's' : ''} seront validées et verrouillées. Les saisies masquées par un filtre ne sont pas concernées.`,
+      confirmLabel: 'Valider',
+    })
+    if (!ok) return
+    let n = 0
+    for (const s of cibles) {
+      if (validerSaisie(s.id, parUser).ok) n++
     }
-    toast.success(`${ok} saisie(s) validée(s).`)
+    toast.success(`${n} saisie(s) validée(s).`)
   }
 
   function openRefus(id: string) {
@@ -252,7 +267,21 @@ export default function Validations() {
       sortable: true,
       sortType: 'number',
       sortAccessor: (s) => s.totalMinutes,
-      render: (s) => formatMinutes(s.totalMinutes),
+      // Journée > 12 h : signalée au responsable pour vigilance (durée maximale
+      // du travail). La saisie n'est pas bloquée côté salarié — elle doit
+      // pouvoir être payée — mais elle ne passe pas inaperçue.
+      render: (s) => (
+        <>
+          {formatMinutes(s.totalMinutes)}
+          {s.totalMinutes > 12 * 60 && (
+            <div>
+              <span className="badge refusee" title="Durée maximale du travail">
+                &gt; 12 h
+              </span>
+            </div>
+          )}
+        </>
+      ),
     },
     {
       key: 'cumul',
@@ -446,9 +475,11 @@ export default function Validations() {
         }}
       >
         <h3 className="section-title">À valider ({aValider.length})</h3>
-        {aValider.length > 0 && (
+        {aValiderVisibles.length > 0 && (
           <button className="btn small" onClick={handleToutValider}>
-            Tout valider
+            {/* Le libellé nomme le périmètre exact : plus d'ambiguïté entre
+                « ce que je vois » et « tout ». */}
+            Valider les {aValiderVisibles.length} saisies affichées
           </button>
         )}
       </div>
@@ -461,6 +492,7 @@ export default function Validations() {
         <DataTable
           rows={aValider}
           columns={aValiderColumns}
+          onFilteredChange={setAValiderVisibles}
           filters={aValiderFilters}
           rowKey={(s) => s.id}
           search={{

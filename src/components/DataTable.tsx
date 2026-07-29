@@ -64,6 +64,10 @@ export interface SearchDef<T> {
 export interface DataTableProps<T> {
   rows: T[]
   columns: ColumnDef<T>[]
+  // Remonte les lignes APRÈS recherche et filtres (avant pagination). Permet à
+  // l'écran d'agir exactement sur CE QUE L'UTILISATEUR VOIT — sans cela, une
+  // action « tout valider » porte sur l'ensemble des données, filtres ignorés.
+  onFilteredChange?: (rows: T[]) => void
   filters?: FacetDef<T>[]
   search?: SearchDef<T>
   defaultSort?: { key: string; dir: SortDir }
@@ -182,6 +186,7 @@ export interface TableControls<T> {
 interface UseTableControlsArgs<T> {
   rows: T[]
   columns: ColumnDef<T>[]
+  onFilteredChange?: (rows: T[]) => void
   filters: FacetDef<T>[]
   search?: SearchDef<T>
   defaultSort?: { key: string; dir: SortDir }
@@ -193,6 +198,7 @@ interface UseTableControlsArgs<T> {
 export function useTableControls<T>({
   rows,
   columns,
+  onFilteredChange,
   filters,
   search,
   defaultSort,
@@ -247,6 +253,11 @@ export function useTableControls<T>({
     }
     return out
   }, [rows, search, searchText, filters, facetValues])
+
+  // Remonte les lignes visibles à l'écran appelant (voir onFilteredChange).
+  useEffect(() => {
+    onFilteredChange?.(filtered)
+  }, [filtered, onFilteredChange])
 
   // 2) Tri STABLE : décoration par index d'origine (départage les égalités).
   const sorted = useMemo(() => {
@@ -356,6 +367,7 @@ function dataLabelOf<T>(col: ColumnDef<T>): string | undefined {
 export default function DataTable<T>({
   rows,
   columns,
+  onFilteredChange,
   filters = [],
   search,
   defaultSort,
@@ -368,6 +380,7 @@ export default function DataTable<T>({
   const ctrl = useTableControls<T>({
     rows,
     columns,
+    onFilteredChange,
     filters,
     search,
     defaultSort,

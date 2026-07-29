@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useDataStore } from '../../store/dataStore'
 import SaisieForm from '../../components/SaisieForm'
 import CollaborateurPicker from '../../components/CollaborateurPicker'
+import { formatDateFr } from '../../lib/dates'
 import { estActif } from '../../types'
 import { todayISO } from '../../lib/dates'
 
@@ -17,7 +18,8 @@ export default function SaisiePourAutrui() {
     [tousCollaborateurs],
   )
   const [collabId, setCollabId] = useState<string>(collaborateurs[0]?.id ?? '')
-  const [done, setDone] = useState(false)
+  const [nbEnregistrees, setNbEnregistrees] = useState(0)
+  const [derniere, setDerniere] = useState<string | null>(null)
 
   const collaborateur = useMemo(
     () => collaborateurs.find((c) => c.id === collabId),
@@ -44,13 +46,16 @@ export default function SaisiePourAutrui() {
           value={collabId}
           onChange={(id) => {
             setCollabId(id)
-            setDone(false)
+            setDerniere(null)
           }}
         />
       </div>
 
-      {done && (
-        <div className="alert info">Saisie enregistrée pour le collaborateur.</div>
+      {derniere && (
+        <div className="alert info">
+          Journée du <strong>{formatDateFr(derniere)}</strong> enregistrée et
+          validée pour ce collaborateur.
+        </div>
       )}
 
       {collaborateur && famille ? (
@@ -62,11 +67,16 @@ export default function SaisiePourAutrui() {
               : 'demi-journées'}
           </p>
           <SaisieForm
-            key={collabId + (done ? '-done' : '')}
+            // Compteur : sans lui, le formulaire ne se réinitialisait plus dès
+            // la 2e saisie d'affilée pour un même collaborateur.
+            key={`${collabId}-${nbEnregistrees}`}
             collaborateur={collaborateur}
             famille={famille}
             saisiPar={session!.identifiant}
-            onSaved={() => setDone(true)}
+            onSaved={(date) => {
+              setNbEnregistrees((n) => n + 1)
+              setDerniere(date)
+            }}
           />
         </div>
       ) : (

@@ -1535,6 +1535,11 @@ textarea[aria-invalid='true']:focus {
 }
 
 @media (max-width: 720px) {
+  /* Espace employé : la barre du haut cède la place à la barre basse. */
+  .nav-employe {
+    display: none;
+  }
+
   .bottom-nav {
     position: fixed;
     left: 0;

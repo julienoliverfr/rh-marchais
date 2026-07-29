@@ -15,17 +15,25 @@ interface Item {
   end?: boolean
 }
 
+// « Aide » n'y figure pas : le bouton flottant « ? » est présent sur TOUS les
+// écrans, la place est mieux employée par « Mes journées » — sans quoi, la
+// barre du haut étant masquée sur mobile, l'employé n'aurait AUCUN chemin pour
+// corriger une saisie refusée.
 const ITEMS: Item[] = [
   { to: '/', label: 'Accueil', icon: '🏠', end: true },
   { to: '/saisie', label: 'Saisir', icon: '🕒' },
+  { to: '/historique', label: 'Mes journées', icon: '📋' },
   { to: '/conges', label: 'Congés', icon: '🌴' },
-  { to: '/aide', label: 'Aide', icon: '💡' },
 ]
 
-export default function BottomNav() {
+// Entrée supplémentaire pour un employé ayant reçu une délégation de saisie.
+const ITEM_COLLEGUE: Item = { to: '/saisie-collegue', label: 'Collègue', icon: '👥' }
+
+export default function BottomNav({ avecCollegue = false }: { avecCollegue?: boolean }) {
+  const items = avecCollegue ? [...ITEMS, ITEM_COLLEGUE] : ITEMS
   return (
     <nav className="bottom-nav" aria-label="Navigation principale">
-      {ITEMS.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
