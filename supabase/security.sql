@@ -51,6 +51,12 @@ create trigger trg_dernier_responsable_del
 create or replace function public.guard_saisie_workflow()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
+  -- Hors session applicative (seed, migration, maintenance en psql) : aucun
+  -- jeton, donc aucune règle « utilisateur » à appliquer — sinon un INSERT
+  -- administrateur se verrait silencieusement forcé en « en_attente ».
+  if auth.uid() is null then
+    return new;
+  end if;
   -- Le responsable qui a le collaborateur dans son périmètre garde la main.
   if public.responsable_sees_collaborateur(new.collaborateur_id) then
     return new;
@@ -63,6 +69,32 @@ begin
     new.validee_le    := null;
     new.debloquee_par := null;
     new.export_id     := null;
+    -- Auteur imposé depuis le jeton (sinon un salarié peut faire passer sa
+    -- saisie pour celle du responsable).
+    new.saisi_par := coalesce(
+      (select identifiant from public.profiles where id = auth.uid()),
+      new.saisi_par
+    );
+
+    -- Règles ANTI-DOUBLE-PAIE, jusqu'ici appliquées uniquement côté navigateur
+    -- (donc contournables par un appel direct à l'API) :
+    --  · pas d'heures sur une journée déjà couverte par un congé validé ;
+    --  · pas de saisie antidatée au-delà de la fenêtre autorisée.
+    if exists (
+      select 1 from public.conges c
+      where c.collaborateur_id = new.collaborateur_id
+        and c.statut = 'validee'
+        and new.date between c.date_debut and c.date_fin
+    ) then
+      raise exception 'Un congé validé couvre cette date.' using errcode = '42501';
+    end if;
+
+    if new.date < current_date - (
+         select coalesce(saisie_retro_jours, 7) from public.regles_generales limit 1
+       ) then
+      raise exception 'Saisie trop ancienne : demandez à votre responsable.'
+        using errcode = '42501';
+    end if;
     return new;
   end if;
 
@@ -106,27 +138,58 @@ create policy saisies_delete on public.saisies for delete to authenticated
     )
   );
 
+-- UNE saisie par collaborateur et par jour, garantie par la BASE. La règle
+-- n'existait qu'en JavaScript : un appel direct à l'API pouvait créer dix fois
+-- la même journée (heures payées en double, heures sup gonflées).
+create unique index if not exists saisies_collab_date_uniq
+  on public.saisies (collaborateur_id, date);
+
 -- ------------------------------------------------------------------ conges ---
 -- Même principe : une demande naît « demandee » ; seul le responsable valide,
 -- refuse ou ajuste.
 create or replace function public.guard_conge_workflow()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  v_identifiant text;
 begin
+  -- Voir guard_saisie_workflow : hors session applicative, on ne touche à rien.
+  if auth.uid() is null then
+    return new;
+  end if;
   if public.responsable_sees_collaborateur(new.collaborateur_id) then
     return new;
   end if;
+
+  -- L'AUTEUR de la demande est imposé depuis le jeton (non déclaratif) :
+  -- sinon un salarié peut faire passer sa demande pour celle d'un autre.
+  select identifiant into v_identifiant from public.profiles where id = auth.uid();
 
   if TG_OP = 'INSERT' then
     new.statut               := 'demandee';
     new.validee_par_user_id  := null;
     new.refus_motif          := null;
+    new.demande_par_user_id  := coalesce(v_identifiant, new.demande_par_user_id);
     return new;
+  end if;
+
+  -- Une demande DÉJÀ TRAITÉE est figée pour le salarié. Sans cela, il pouvait
+  -- requalifier un congé payé validé en « maladie » (type sans solde) et
+  -- RÉCUPÉRER ses jours, ou en décaler les dates après validation.
+  if old.statut <> 'demandee' then
+    raise exception 'Demande déjà traitée : seul le responsable peut la modifier.'
+      using errcode = '42501';
   end if;
 
   if new.statut is distinct from old.statut
      or new.validee_par_user_id is distinct from old.validee_par_user_id
      or new.refus_motif is distinct from old.refus_motif
-     or new.nb_jours is distinct from old.nb_jours then
+     or new.nb_jours is distinct from old.nb_jours
+     or new.type is distinct from old.type
+     or new.date_debut is distinct from old.date_debut
+     or new.date_fin is distinct from old.date_fin
+     or new.demi_jour is distinct from old.demi_jour
+     or new.collaborateur_id is distinct from old.collaborateur_id
+     or new.demande_par_user_id is distinct from old.demande_par_user_id then
     raise exception 'Seul le responsable peut traiter une demande de congé.'
       using errcode = '42501';
   end if;
