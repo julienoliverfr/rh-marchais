@@ -262,7 +262,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   font: inherit;
   padding: 0.7rem 0.75rem;
   border: 1px solid var(--border);
@@ -270,6 +271,15 @@ select {
   background: var(--surface);
   color: var(--text);
   width: 100%;
+}
+
+/* Zone de texte (description de la journée) : même police que le reste de
+   l'application — sans `font: inherit`, le navigateur applique sa police par
+   défaut (monospace), visuellement incohérente avec les autres champs. */
+textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: 1.4;
 }
 
 /* Cases à cocher / boutons radio : ne pas hériter du champ pleine largeur */
@@ -308,7 +318,8 @@ input[type='time']::-webkit-datetime-edit {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   outline: 2px solid var(--vigne);
   outline-offset: 1px;
 }
@@ -1338,12 +1349,14 @@ td.dt-empty {
 
 /* Champ en erreur : bordure rouge nette (accessibilité + repérage). */
 input[aria-invalid='true'],
-select[aria-invalid='true'] {
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
   border-color: var(--danger);
 }
 
 input[aria-invalid='true']:focus,
-select[aria-invalid='true']:focus {
+select[aria-invalid='true']:focus,
+textarea[aria-invalid='true']:focus {
   outline-color: var(--danger);
 }
 
