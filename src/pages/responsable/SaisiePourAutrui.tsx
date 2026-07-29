@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { useDataStore } from '../../store/dataStore'
 import SaisieForm from '../../components/SaisieForm'
+import CollaborateurPicker from '../../components/CollaborateurPicker'
 import { estActif } from '../../types'
 import { todayISO } from '../../lib/dates'
 
@@ -37,26 +38,15 @@ export default function SaisiePourAutrui() {
       </p>
 
       <div className="card">
-        <div className="form-row">
-          <label htmlFor="collab">Collaborateur</label>
-          <select
-            id="collab"
-            value={collabId}
-            onChange={(e) => {
-              setCollabId(e.target.value)
-              setDone(false)
-            }}
-          >
-            {collaborateurs.map((c) => {
-              const f = familles.find((x) => x.id === c.familleId)
-              return (
-                <option key={c.id} value={c.id}>
-                  {c.prenom} {c.nom} — {f?.nom ?? '?'}
-                </option>
-              )
-            })}
-          </select>
-        </div>
+        <CollaborateurPicker
+          collaborateurs={collaborateurs}
+          familles={familles}
+          value={collabId}
+          onChange={(id) => {
+            setCollabId(id)
+            setDone(false)
+          }}
+        />
       </div>
 
       {done && (

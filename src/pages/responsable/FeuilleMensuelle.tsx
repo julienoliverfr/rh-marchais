@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
-import type { Collaborateur, CongeType } from '../../types'
+import type { CongeType } from '../../types'
 import { useDataStore } from '../../store/dataStore'
 import { CONGE_TYPE_LABELS } from '../../lib/conges'
 import { feriesCalcules } from '../../lib/feries'
@@ -14,6 +14,7 @@ import {
 import Breadcrumb from '../../components/Breadcrumb'
 import StatusBadge from '../../components/StatusBadge'
 import EmptyState from '../../components/EmptyState'
+import CollaborateurPicker from '../../components/CollaborateurPicker'
 
 // ============================================================================
 // Feuille mensuelle — vue de CONTRÔLE avant export comptable.
@@ -65,48 +66,6 @@ export default function FeuilleMensuelle() {
   const [mois, setMois] = useState<string>(currentMonthKey())
 
   const collab = collaborateurs.find((c) => c.id === collabId)
-
-  // Libellés d'affichage UNIQUES : deux homonymes sont distingués par un
-  // suffixe, sinon le champ de recherche ne saurait pas lequel sélectionner.
-  const { labelParId, idParLabel } = useMemo(() => {
-    const vus = new Map<string, number>()
-    const labelParId = new Map<string, string>()
-    const idParLabel = new Map<string, string>()
-    for (const c of collaborateurs) {
-      const base = `${c.prenom} ${c.nom}`.trim()
-      const n = (vus.get(base) ?? 0) + 1
-      vus.set(base, n)
-      const label = n === 1 ? base : `${base} (${n})`
-      labelParId.set(c.id, label)
-      idParLabel.set(label.toLowerCase(), c.id)
-    }
-    return { labelParId, idParLabel }
-  }, [collaborateurs])
-
-  const labelCollab = (c: Collaborateur): string =>
-    labelParId.get(c.id) ?? `${c.prenom} ${c.nom}`
-
-  // Texte tapé dans le champ (pré-rempli avec le collaborateur sélectionné).
-  const [recherche, setRecherche] = useState<string>(
-    collaborateurs[0] ? `${collaborateurs[0].prenom} ${collaborateurs[0].nom}` : '',
-  )
-
-  // Résout le texte saisi en collaborateur : correspondance exacte (choix dans
-  // les suggestions), sinon sélection automatique si UNE SEULE personne
-  // correspond au texte tapé (« fer » → Jean Ferrand).
-  function choisirCollaborateur(texte: string) {
-    setRecherche(texte)
-    const t = texte.trim().toLowerCase()
-    const exact = idParLabel.get(t)
-    if (exact) {
-      setCollabId(exact)
-      return
-    }
-    const candidats = t
-      ? collaborateurs.filter((c) => labelCollab(c).toLowerCase().includes(t))
-      : []
-    setCollabId(candidats.length === 1 ? candidats[0].id : '')
-  }
 
   const labelDe = (code: CongeType): string =>
     typesAbsence.find((t) => t.code === code)?.label ?? CONGE_TYPE_LABELS[code]
@@ -241,34 +200,11 @@ export default function FeuilleMensuelle() {
 
       <div className="card">
         <div className="form-grid">
-          <div className="form-row">
-            <label htmlFor="collab">Collaborateur</label>
-            {/* Champ de SAISIE avec suggestions (datalist) plutôt qu'une liste
-                déroulante : avec plusieurs dizaines de collaborateurs, dérouler
-                et chercher à l'œil devient vite impraticable. On tape quelques
-                lettres du nom, la liste se filtre toute seule. */}
-            <input
-              id="collab"
-              type="search"
-              list="collab-options"
-              value={recherche}
-              placeholder="Tapez un nom…"
-              autoComplete="off"
-              onChange={(e) => choisirCollaborateur(e.target.value)}
-            />
-            <datalist id="collab-options">
-              {collaborateurs.map((c) => (
-                <option key={c.id} value={labelCollab(c)} />
-              ))}
-            </datalist>
-            {!collab && (
-              <p className="muted" style={{ fontSize: '0.8rem' }}>
-                {recherche.trim()
-                  ? 'Aucun collaborateur ne correspond.'
-                  : 'Commencez à taper un nom, ou effacez pour voir toute la liste.'}
-              </p>
-            )}
-          </div>
+          <CollaborateurPicker
+            collaborateurs={collaborateurs}
+            value={collabId}
+            onChange={setCollabId}
+          />
           <div className="form-row">
             <label htmlFor="mois">Mois</label>
             <div className="btn-row" style={{ alignItems: 'center' }}>
