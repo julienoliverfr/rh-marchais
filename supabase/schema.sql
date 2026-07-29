@@ -36,6 +36,8 @@ create table if not exists public.familles (
   nom text not null,
   mode_saisie text not null check (mode_saisie in ('journee_continue', 'demi_journees')),
   pause_deduite_min integer not null default 0,
+  -- Exiger une description de la journée à la saisie ? Réglé par équipe.
+  activite_obligatoire boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -132,6 +134,7 @@ create table if not exists public.saisies (
   aprem_fin text,
   -- Commun
   total_minutes integer not null default 0,
+  activite text,  -- description libre de la journée (exigée selon l'équipe)
   statut text not null check (statut in ('en_attente', 'validee', 'refusee', 'verrouillee')),
   saisi_par text not null,
   created_at timestamptz not null default now(),

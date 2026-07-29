@@ -19,6 +19,7 @@ const empty: Famille = {
   nom: '',
   modeSaisie: 'journee_continue',
   pauseDeduiteMin: 60,
+  activiteObligatoire: false,
 }
 
 // Paramétrage des familles : liste + création + édition (CRUD localStorage).
@@ -92,6 +93,19 @@ export default function Familles() {
       sortType: 'number',
       sortAccessor: (f) => f.pauseDeduiteMin,
       render: (f) => `${f.pauseDeduiteMin} min`,
+    },
+    {
+      key: 'activite',
+      label: 'Description journée',
+      align: 'center',
+      sortable: true,
+      sortAccessor: (f) => (f.activiteObligatoire ? 1 : 0),
+      render: (f) =>
+        f.activiteObligatoire ? (
+          <span className="badge en_attente">Obligatoire</span>
+        ) : (
+          <span className="muted">Non demandée</span>
+        ),
     },
     {
       key: 'nb',
@@ -178,6 +192,19 @@ export default function Familles() {
               >
                 <option value="journee_continue">Journée continue</option>
                 <option value="demi_journees">Demi-journées</option>
+              </select>
+            </div>
+            <div className="form-row">
+              <label htmlFor="activite">Description de la journée</label>
+              <select
+                id="activite"
+                value={draft.activiteObligatoire ? 'oui' : 'non'}
+                onChange={(e) =>
+                  setDraft({ ...draft, activiteObligatoire: e.target.value === 'oui' })
+                }
+              >
+                <option value="non">Non demandée</option>
+                <option value="oui">Obligatoire à chaque saisie</option>
               </select>
             </div>
             <div className="form-row">

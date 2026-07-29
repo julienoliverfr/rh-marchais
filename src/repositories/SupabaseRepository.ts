@@ -73,6 +73,7 @@ interface FamilleRow {
   nom: string
   mode_saisie: Famille['modeSaisie']
   pause_deduite_min: number
+  activite_obligatoire: boolean | null
 }
 
 interface ModeleRow {
@@ -125,6 +126,7 @@ interface SaisieRow {
   aprem_debut: string | null
   aprem_fin: string | null
   total_minutes: number
+  activite: string | null
   statut: Saisie['statut']
   saisi_par: string
   created_at: string
@@ -240,6 +242,7 @@ function familleFromRow(r: FamilleRow): Famille {
     nom: r.nom,
     modeSaisie: r.mode_saisie,
     pauseDeduiteMin: Number(r.pause_deduite_min),
+    activiteObligatoire: r.activite_obligatoire ?? false,
   }
 }
 function familleToRow(f: Famille): FamilleRow {
@@ -248,6 +251,7 @@ function familleToRow(f: Famille): FamilleRow {
     nom: f.nom,
     mode_saisie: f.modeSaisie,
     pause_deduite_min: f.pauseDeduiteMin,
+    activite_obligatoire: f.activiteObligatoire ?? false,
   }
 }
 
@@ -316,6 +320,7 @@ function saisieFromRow(r: SaisieRow): Saisie {
     apremDebut: r.aprem_debut ?? undefined,
     apremFin: r.aprem_fin ?? undefined,
     totalMinutes: Number(r.total_minutes),
+    activite: r.activite ?? undefined,
     statut: r.statut,
     saisiPar: r.saisi_par,
     createdAt: r.created_at,
@@ -340,6 +345,7 @@ function saisieToRow(s: Saisie): SaisieRow {
     aprem_debut: s.apremDebut ?? null,
     aprem_fin: s.apremFin ?? null,
     total_minutes: s.totalMinutes,
+    activite: s.activite ?? null,
     statut: s.statut,
     saisi_par: s.saisiPar,
     created_at: s.createdAt,

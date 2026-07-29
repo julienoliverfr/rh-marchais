@@ -53,6 +53,10 @@ export default function SaisieForm({
   const retroJours = useDataStore((s) => s.regles.saisieRetroJours)
   const MIN_DATE = estResponsable ? '' : isoDaysAgo(retroJours)
   const MAX_DATE = todayISO()
+  // Description de la journée : réglée PAR ÉQUIPE (Administration → Équipes).
+  const activiteExigee = famille.activiteObligatoire === true
+  const [activite, setActivite] = useState(existing?.activite ?? '')
+  const [activiteError, setActiviteError] = useState<string | null>(null)
   const isContinu = famille.modeSaisie === 'journee_continue'
 
   const [date, setDate] = useState(existing?.date ?? MAX_DATE)
@@ -95,6 +99,13 @@ export default function SaisieForm({
       ok = false
     } else {
       setDateError(null)
+    }
+    // Description de la journée : exigée si l'équipe l'a paramétré ainsi.
+    if (activiteExigee && !activite.trim()) {
+      setActiviteError('Décrivez ce que vous avez fait aujourd’hui.')
+      ok = false
+    } else {
+      setActiviteError(null)
     }
     // Cohérence des horaires. Sans ces contrôles, une fin avant le début était
     // silencieusement comptée 0 (demi-journée perdue), un chevauchement
@@ -172,6 +183,7 @@ export default function SaisieForm({
       collaborateurId: collaborateur.id,
       date,
       totalMinutes: total,
+      activite: activite.trim() || undefined,
       statut: existing?.statut ?? (autoValidee ? 'validee' : 'en_attente'),
       saisiPar,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
@@ -342,6 +354,26 @@ export default function SaisieForm({
             </div>
           )}
         </>
+      )}
+
+      {/* Description de la journée : affichée UNIQUEMENT si l'équipe l'exige. */}
+      {activiteExigee && (
+        <div className="form-row">
+          <label htmlFor="activite">Ce que vous avez fait aujourd'hui</label>
+          <textarea
+            id="activite"
+            rows={3}
+            value={activite}
+            placeholder="Ex. taille parcelle nord, livraison Montguyon…"
+            aria-invalid={activiteError ? true : undefined}
+            aria-describedby={activiteError ? 'activite-err' : undefined}
+            onChange={(e) => {
+              setActivite(e.target.value)
+              if (activiteError) setActiviteError(null)
+            }}
+          />
+          <FieldError id="activite-err" message={activiteError} />
+        </div>
       )}
 
       <div className="alert info">

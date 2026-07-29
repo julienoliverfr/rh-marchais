@@ -232,7 +232,18 @@ export default function Validations() {
     {
       key: 'horaires',
       label: 'Horaires',
-      render: (s) => describeHoraires(s),
+      // La description de la journée est affichée ici : le responsable doit
+      // savoir CE QUI a été fait avant de valider.
+      render: (s) => (
+        <>
+          {describeHoraires(s)}
+          {s.activite && (
+            <div className="muted" style={{ fontSize: '0.8rem' }}>
+              {s.activite}
+            </div>
+          )}
+        </>
+      ),
     },
     {
       key: 'total',

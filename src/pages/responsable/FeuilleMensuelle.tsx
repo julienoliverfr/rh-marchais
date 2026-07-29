@@ -316,7 +316,14 @@ export default function FeuilleMensuelle() {
                             <td style={{ paddingLeft: '1.5rem' }}>{l.jourLabel}</td>
                             <td>
                               {l.saisie ? (
-                                describeHoraires(l.saisie)
+                                <>
+                                  {describeHoraires(l.saisie)}
+                                  {l.saisie.activite && (
+                                    <div className="muted" style={{ fontSize: '0.8rem' }}>
+                                      {l.saisie.activite}
+                                    </div>
+                                  )}
+                                </>
                               ) : (
                                 <span className="muted">—</span>
                               )}

@@ -37,6 +37,10 @@ export interface Famille {
   nom: string
   modeSaisie: ModeSaisie
   pauseDeduiteMin: number // pause déduite par défaut (mode journée continue)
+  // Demander (et EXIGER) une description de la journée à la saisie ? Réglé par
+  // équipe : certaines doivent justifier leur activité, d'autres non.
+  // Absent = non demandée (comportement des données historiques).
+  activiteObligatoire?: boolean
 }
 
 export interface ModeleContrat {
@@ -140,6 +144,9 @@ export interface Saisie {
   apremFin?: string
   // Commun
   totalMinutes: number // total calculé et figé au moment de la saisie
+  // Description libre de la journée (« ce que j'ai fait »). Demandée — et
+  // exigée — selon le réglage de l'équipe (Famille.activiteObligatoire).
+  activite?: string
   statut: StatutSaisie
   saisiPar: string // identifiant du compte ayant saisi
   createdAt: string
