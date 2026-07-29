@@ -46,7 +46,7 @@ AC=$(psql "select collaborateur_id from public.profiles where identifiant='ameli
 
 # Dates de test RELATIVES : une date figée finit par sortir de la fenêtre de
 # saisie rétroactive (7 j) et fait échouer le test sans que l'appli soit en cause.
-HIER=$(date -d "-1 day" +%F)
+JOUR=$(date +%F)
 PLUS_TARD=$(date -d "+40 days" +%F)
 
 # ids de test (nettoyés à la fin)
@@ -61,7 +61,10 @@ SEEN=$(curl -s "$API/rest/v1/collaborateurs?id=eq.$JC&select=id" -H "apikey: $AN
 [ "$SEEN" -ge 1 ] && ok "jean lit son collaborateur (RLS)" || ko "jean ne lit pas son collaborateur"
 
 # 3) jean saisit ses heures (INSERT saisies)
-ST=$(post saisies "$JEAN" "{\"id\":\"$S1\",\"collaborateur_id\":\"$JC\",\"date\":\"$HIER\",\"heure_debut\":\"08:00\",\"heure_fin\":\"17:00\",\"pause_min\":60,\"total_minutes\":480,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
+# Le serveur contient peut-être déjà une saisie ce jour-là (jeu de démonstration) :
+# on libère la journée pour que le test reste reproductible sur un serveur peuplé.
+psql "delete from public.saisies where collaborateur_id='$JC' and date='$JOUR';" >/dev/null
+ST=$(post saisies "$JEAN" "{\"id\":\"$S1\",\"collaborateur_id\":\"$JC\",\"date\":\"$JOUR\",\"heure_debut\":\"08:00\",\"heure_fin\":\"17:00\",\"pause_min\":60,\"total_minutes\":480,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
 [ "$ST" = "201" ] && ok "jean saisit ses heures ($ST)" || ko "jean saisit ses heures ($ST : $(cat /tmp/smoke_body.txt))"
 
 # 4) jean demande un congé (INSERT conges) + trace d'audit (INSERT audit_log)
@@ -111,7 +114,7 @@ AUTEUR=$(psql "select par_user_id from public.audit_log where id='$X9'")
   || ko "FAILLE: audit signe '$AUTEUR' au lieu de jean"
 
 # 5) NÉGATIF : jean ne doit PAS pouvoir saisir pour le collaborateur d'un autre
-NT=$(post saisies "$JEAN" "{\"id\":\"$X9\",\"collaborateur_id\":\"$AC\",\"date\":\"$HIER\",\"total_minutes\":100,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
+NT=$(post saisies "$JEAN" "{\"id\":\"$X9\",\"collaborateur_id\":\"$AC\",\"date\":\"$JOUR\",\"total_minutes\":100,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
 [ "$NT" != "201" ] && ok "jean NE peut PAS saisir pour autrui (rejet $NT)" || ko "FAILLE: jean a saisi pour autrui ($NT)"
 
 # Nettoyage des données de test
