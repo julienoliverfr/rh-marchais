@@ -44,6 +44,11 @@ JC=$(psql "select collaborateur_id from public.profiles where identifiant='jean@
 AC=$(psql "select collaborateur_id from public.profiles where identifiant='amelie@demo.local'")
 [ -n "$JC" ] && ok "collaborateur de jean trouvé" || ko "collaborateur de jean introuvable"
 
+# Dates de test RELATIVES : une date figée finit par sortir de la fenêtre de
+# saisie rétroactive (7 j) et fait échouer le test sans que l'appli soit en cause.
+HIER=$(date -d "-1 day" +%F)
+PLUS_TARD=$(date -d "+40 days" +%F)
+
 # ids de test (nettoyés à la fin)
 S1=aaaaaaaa-0000-4000-8000-000000000001
 C1=aaaaaaaa-0000-4000-8000-000000000002
@@ -56,11 +61,11 @@ SEEN=$(curl -s "$API/rest/v1/collaborateurs?id=eq.$JC&select=id" -H "apikey: $AN
 [ "$SEEN" -ge 1 ] && ok "jean lit son collaborateur (RLS)" || ko "jean ne lit pas son collaborateur"
 
 # 3) jean saisit ses heures (INSERT saisies)
-ST=$(post saisies "$JEAN" "{\"id\":\"$S1\",\"collaborateur_id\":\"$JC\",\"date\":\"2026-07-20\",\"heure_debut\":\"08:00\",\"heure_fin\":\"17:00\",\"pause_min\":60,\"total_minutes\":480,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
+ST=$(post saisies "$JEAN" "{\"id\":\"$S1\",\"collaborateur_id\":\"$JC\",\"date\":\"$HIER\",\"heure_debut\":\"08:00\",\"heure_fin\":\"17:00\",\"pause_min\":60,\"total_minutes\":480,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
 [ "$ST" = "201" ] && ok "jean saisit ses heures ($ST)" || ko "jean saisit ses heures ($ST : $(cat /tmp/smoke_body.txt))"
 
 # 4) jean demande un congé (INSERT conges) + trace d'audit (INSERT audit_log)
-CT=$(post conges "$JEAN" "{\"id\":\"$C1\",\"collaborateur_id\":\"$JC\",\"type\":\"conge_paye\",\"date_debut\":\"2026-09-01\",\"date_fin\":\"2026-09-01\",\"demi_jour\":\"aucune\",\"nb_jours\":1,\"statut\":\"demandee\",\"demande_par_user_id\":\"jean@demo.local\"}")
+CT=$(post conges "$JEAN" "{\"id\":\"$C1\",\"collaborateur_id\":\"$JC\",\"type\":\"conge_paye\",\"date_debut\":\"$PLUS_TARD\",\"date_fin\":\"$PLUS_TARD\",\"demi_jour\":\"aucune\",\"nb_jours\":1,\"statut\":\"demandee\",\"demande_par_user_id\":\"jean@demo.local\"}")
 [ "$CT" = "201" ] && ok "jean demande un congé ($CT)" || ko "jean demande un congé ($CT : $(cat /tmp/smoke_body.txt))"
 AT=$(post audit_log "$JEAN" "{\"id\":\"$A1\",\"cible_type\":\"conge\",\"cible_id\":\"$C1\",\"action\":\"demande_conge\",\"par_user_id\":\"jean@demo.local\"}")
 [ "$AT" = "201" ] && ok "écriture audit en INSERT ($AT)" || ko "écriture audit ($AT : $(cat /tmp/smoke_body.txt))"
@@ -106,7 +111,7 @@ AUTEUR=$(psql "select par_user_id from public.audit_log where id='$X9'")
   || ko "FAILLE: audit signe '$AUTEUR' au lieu de jean"
 
 # 5) NÉGATIF : jean ne doit PAS pouvoir saisir pour le collaborateur d'un autre
-NT=$(post saisies "$JEAN" "{\"id\":\"$X9\",\"collaborateur_id\":\"$AC\",\"date\":\"2026-07-20\",\"total_minutes\":100,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
+NT=$(post saisies "$JEAN" "{\"id\":\"$X9\",\"collaborateur_id\":\"$AC\",\"date\":\"$HIER\",\"total_minutes\":100,\"statut\":\"en_attente\",\"saisi_par\":\"jean@demo.local\"}")
 [ "$NT" != "201" ] && ok "jean NE peut PAS saisir pour autrui (rejet $NT)" || ko "FAILLE: jean a saisi pour autrui ($NT)"
 
 # Nettoyage des données de test
