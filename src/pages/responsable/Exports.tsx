@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ExportFormat, Perimetre, RecapLigne } from '../../types'
 import { useAuthStore } from '../../store/authStore'
 import { useDataStore } from '../../store/dataStore'
-import { currentMonthKey, formatMonthFr } from '../../lib/dates'
+import { currentMonthKey, formatDateFr, formatMonthFr } from '../../lib/dates'
 import { formatHeuresDecimal, formatJours } from '../../lib/hours'
 import { downloadRecapCsv, downloadRecapXlsx } from '../../lib/exportFile'
 import DataTable from '../../components/DataTable'
@@ -52,6 +52,13 @@ export default function Exports() {
   )
 
   const aDesDonnees = recap.lignes.length > 0
+  // Exports DÉJÀ générés pour cette période + ce périmètre (null si aucun).
+  const dejaExporte = useMemo(() => {
+    const liste = exports
+      .filter((e) => e.periode === periode && e.perimetre === perimetre)
+      .sort((a, b) => a.genereLe.localeCompare(b.genereLe))
+    return liste.length > 0 ? liste : null
+  }, [exports, periode, perimetre])
 
   // Libellé lisible du périmètre (pour messages + nom de fichier).
   const perimetreLabel = useMemo(() => {
@@ -271,6 +278,21 @@ export default function Exports() {
           )}
         </div>
       </div>
+
+      {/* Alerte RÉ-EXPORT : un fichier complet a déjà été transmis pour cette
+          période et ce périmètre. Sans avertissement, le comptable peut recevoir
+          deux récapitulatifs complets et payer le mois deux fois. */}
+      {dejaExporte && (
+        <div className="alert error">
+          <strong>Attention : ce mois a déjà été exporté</strong> (
+          {dejaExporte.length} fois, le dernier le{' '}
+          {formatDateFr(dejaExporte[dejaExporte.length - 1].genereLe.slice(0, 10))}).
+          Un nouvel export régénère le <strong>mois complet</strong>, pas
+          seulement les nouveautés. Prévenez votre comptable qu'il s'agit d'un
+          <strong> rectificatif qui remplace</strong> le précédent, sinon le mois
+          risque d'être payé deux fois.
+        </div>
+      )}
 
       {/* ---------- Bandeau d'explication du verrouillage ---------- */}
       {verrouillageActif ? (

@@ -1,7 +1,18 @@
 // Utilitaires de dates (semaine ISO lundi->dimanche, bornes de saisie).
 
+// yyyy-mm-dd depuis les composants LOCAUX de la date.
+//
+// `toISOString()` convertit en UTC : en France (UTC+1/+2) il renvoie la VEILLE
+// entre minuit et 2 h du matin, et décale d'un jour toute date ramenée à minuit
+// local. La fenêtre de saisie annoncée (« 7 jours ») en valait donc 8, et une
+// équipe de nuit ne pouvait pas saisir « aujourd'hui ».
+export function toISODate(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toISODate(new Date())
 }
 
 // Date ISO d'il y a n jours
@@ -9,7 +20,7 @@ export function isoDaysAgo(n: number): string {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
   d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
+  return toISODate(d)
 }
 
 // Lundi de la semaine contenant `ref` (par défaut aujourd'hui)

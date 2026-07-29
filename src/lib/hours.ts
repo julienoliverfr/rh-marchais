@@ -74,13 +74,25 @@ export function formatMinutes(total: number): string {
   return `${h}h${String(m).padStart(2, '0')}`
 }
 
+// Une saisie REFUSÉE ne sera jamais payée : elle ne doit pas gonfler les cumuls
+// affichés (tableau de bord du salarié, colonne « Cumul semaine » du
+// responsable), sinon l'écran annonce des heures que l'export ignore.
+function compteDansCumul(s: Saisie): boolean {
+  return s.statut !== 'refusee'
+}
+
 // Total (minutes) des saisies d'un collaborateur sur la semaine courante.
 export function totalSemaineMinutes(
   saisies: Saisie[],
   collaborateurId: string,
 ): number {
   return saisies
-    .filter((s) => s.collaborateurId === collaborateurId && isInCurrentWeek(s.date))
+    .filter(
+      (s) =>
+        s.collaborateurId === collaborateurId &&
+        isInCurrentWeek(s.date) &&
+        compteDansCumul(s),
+    )
     .reduce((acc, s) => acc + s.totalMinutes, 0)
 }
 
@@ -96,7 +108,7 @@ export function totalSemaineMinutesForDate(
   const end = endOfWeek(ref)
   return saisies
     .filter((s) => {
-      if (s.collaborateurId !== collaborateurId) return false
+      if (s.collaborateurId !== collaborateurId || !compteDansCumul(s)) return false
       const d = new Date(s.date + 'T12:00:00')
       return d >= start && d <= end
     })

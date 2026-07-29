@@ -7,6 +7,7 @@ import {
   computeDemiJournees,
   computeJourneeContinue,
   formatMinutes,
+  timeToMinutes,
 } from '../lib/hours'
 import HelpTip from './HelpTip'
 import FieldError from './FieldError'
@@ -21,7 +22,9 @@ interface Props {
   onCancel?: () => void
 }
 
-const MAX_DATE = todayISO()
+// NB : calculé À CHAQUE RENDU (voir plus bas). Évalué au chargement du module,
+// il restait figé sur une PWA laissée ouverte toute la nuit : le lendemain, le
+// salarié ne pouvait plus saisir « aujourd'hui ».
 
 import { newId } from '../lib/id'
 
@@ -49,6 +52,7 @@ export default function SaisieForm({
   const estResponsable = useAuthStore((s) => s.session?.role === 'responsable')
   const retroJours = useDataStore((s) => s.regles.saisieRetroJours)
   const MIN_DATE = estResponsable ? '' : isoDaysAgo(retroJours)
+  const MAX_DATE = todayISO()
   const isContinu = famille.modeSaisie === 'journee_continue'
 
   const [date, setDate] = useState(existing?.date ?? MAX_DATE)
@@ -92,13 +96,66 @@ export default function SaisieForm({
     } else {
       setDateError(null)
     }
-    if (total <= 0) {
+    // Cohérence des horaires. Sans ces contrôles, une fin avant le début était
+    // silencieusement comptée 0 (demi-journée perdue), un chevauchement
+    // matin/après-midi gonflait le total, et une journée pouvait atteindre 47 h.
+    const err = verifierHoraires()
+    if (err) {
+      setTotalError(err)
+      ok = false
+    } else if (total <= 0) {
       setTotalError('Le total calculé est nul : vérifiez les heures saisies.')
       ok = false
     } else {
       setTotalError(null)
     }
     return ok
+  }
+
+  // Renvoie un message d'erreur, ou null si les horaires sont cohérents.
+  function verifierHoraires(): string | null {
+    const min = (t?: string) => timeToMinutes(t)
+    const ordre = (d: string | undefined, f: string | undefined, quoi: string) => {
+      const a = min(d)
+      const b = min(f)
+      if (a == null || b == null) return null
+      if (b <= a) return `${quoi} : l'heure de fin doit être après l'heure de début.`
+      return null
+    }
+
+    if (isContinu) {
+      const e = ordre(heureDebut, heureFin, 'Journée')
+      if (e) return e
+      const a = min(heureDebut)
+      const b = min(heureFin)
+      if (a != null && b != null && (pauseMin ?? 0) >= b - a) {
+        return 'La pause est supérieure ou égale au temps travaillé.'
+      }
+    } else {
+      if (showMatin) {
+        const e = ordre(matinDebut, matinFin, 'Matin')
+        if (e) return e
+      }
+      if (showAprem) {
+        const e = ordre(apremDebut, apremFin, 'Après-midi')
+        if (e) return e
+      }
+      // Le matin ne doit pas déborder sur l'après-midi.
+      if (showMatin && showAprem) {
+        const finMatin = min(matinFin)
+        const debutAprem = min(apremDebut)
+        if (finMatin != null && debutAprem != null && debutAprem < finMatin) {
+          return "L'après-midi commence avant la fin du matin (créneaux qui se chevauchent)."
+        }
+      }
+    }
+
+    // Garde-fou de vraisemblance (le Code du travail plafonne à 10 h, 12 h par
+    // dérogation) : on alerte au-delà de 12 h plutôt que d'accepter l'absurde.
+    if (total > 12 * 60) {
+      return `Durée inhabituelle (${Math.round((total / 60) * 10) / 10} h) : vérifiez les heures saisies.`
+    }
+    return null
   }
 
   function handleSubmit(e: React.FormEvent) {
