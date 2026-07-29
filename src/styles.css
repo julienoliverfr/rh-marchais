@@ -324,6 +324,42 @@ textarea:focus {
   outline-offset: 1px;
 }
 
+/* Sur écran TACTILE, toute cible cliquable atteint 44 px de haut (recommandation
+   d'accessibilité) : au doigt, un bouton de 20 px est presque impossible à
+   viser. N'affecte pas la souris, où la densité reste confortable. */
+@media (pointer: coarse) {
+  /* `.btn.small` impose `min-height: auto` (plus spécifique que `.btn`) : il
+     faut le cibler explicitement, sinon les petits boutons restent à ~34 px. */
+  .btn,
+  .btn.small,
+  .btn-lien,
+  .seg button {
+    min-height: 44px;
+  }
+
+  /* Bulle d'aide « ? » : on garde sa petite taille visuelle (elle accompagne un
+     libellé) mais on ÉTEND sa zone tactile à 44 px via un pseudo-élément — la
+     cible devient confortable au doigt sans déformer la mise en page. */
+  .help-tip-btn {
+    position: relative;
+  }
+  .help-tip-btn::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+
+  /* iOS Safari ZOOME automatiquement la page dès qu'on touche un champ dont la
+     police est inférieure à 16 px (filtres, petits sélecteurs…) : l'écran se
+     décale et l'utilisateur doit re-dézoomer à chaque fois. On garantit donc
+     16 px sur tactile. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* Bouton présenté comme un lien (en-tête de semaine dépliable) */
 .btn-lien {
   background: none;
