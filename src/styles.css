@@ -313,6 +313,21 @@ select:focus {
   outline-offset: 1px;
 }
 
+/* Bouton présenté comme un lien (en-tête de semaine dépliable) */
+.btn-lien {
+  background: none;
+  border: 0;
+  padding: 0;
+  width: auto;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.btn-lien:hover {
+  text-decoration: underline;
+}
+
 /* Feuille mensuelle : ligne de sous-total hebdomadaire (heures sup) */
 tr.semaine-total > td {
   background: var(--surface-alt, rgba(0, 0, 0, 0.04));

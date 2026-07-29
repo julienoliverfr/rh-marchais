@@ -126,6 +126,33 @@ export default function FeuilleMensuelle() {
     return acc
   }, [collab, saisies, mois, regles])
 
+  // Regroupement des jours par semaine, dans l'ordre du mois. La vue montre
+  // les SEMAINES par défaut (niveau utile pour les heures sup) ; on déplie une
+  // semaine pour voir le détail jour par jour.
+  const semainesAffichees = useMemo(() => {
+    const out: { lundi: string; jours: typeof lignes }[] = []
+    for (const l of lignes) {
+      const lundi = isoLundi(l.date)
+      const derniere = out[out.length - 1]
+      if (derniere && derniere.lundi === lundi) derniere.jours.push(l)
+      else out.push({ lundi, jours: [l] })
+    }
+    return out
+  }, [lignes])
+
+  // Semaines dépliées (vide = tout replié).
+  const [ouvertes, setOuvertes] = useState<Set<string>>(new Set())
+  const toggleSemaine = (lundi: string) =>
+    setOuvertes((prev) => {
+      const n = new Set(prev)
+      if (n.has(lundi)) n.delete(lundi)
+      else n.add(lundi)
+      return n
+    })
+  const toutDeplier = () =>
+    setOuvertes(new Set(semainesAffichees.map((s) => s.lundi)))
+  const toutReplier = () => setOuvertes(new Set())
+
   // Totaux du mois (mêmes règles que l'export : semaines complètes).
   const totaux = useMemo(() => {
     if (!collab) return null
@@ -215,7 +242,24 @@ export default function FeuilleMensuelle() {
         <EmptyState icon="👥" text="Aucun collaborateur à afficher." />
       ) : (
         <>
-          <div className="card table-wrap" style={{ marginTop: '1rem' }}>
+          <div className="page-head" style={{ marginTop: '1rem' }}>
+            <p className="muted" style={{ margin: 0 }}>
+              Cliquez sur une semaine pour voir le détail des jours.
+            </p>
+            <div className="btn-row">
+              <button className="btn secondary small" onClick={toutDeplier}>
+                Tout déplier
+              </button>
+              <button
+                className="btn secondary small"
+                onClick={toutReplier}
+                disabled={ouvertes.size === 0}
+              >
+                Tout replier
+              </button>
+            </div>
+          </div>
+          <div className="card table-wrap">
             <table>
               <thead>
                 <tr>
@@ -226,71 +270,93 @@ export default function FeuilleMensuelle() {
                 </tr>
               </thead>
               <tbody>
-                {lignes.map((l, i) => (
-                  <Fragment key={l.date}>
-                  <tr className={l.weekend ? 'muted' : undefined}>
-                    <td>{l.jourLabel}</td>
-                    <td>
-                      {l.saisie ? (
-                        describeHoraires(l.saisie)
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {l.saisie ? (
-                        formatMinutes(l.saisie.totalMinutes)
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td>
-                      {l.saisie && <StatusBadge statut={l.saisie.statut} />}
-                      {l.conge && (
-                        <span className="badge validee">
-                          🌴 {labelDe(l.conge.type)}
-                        </span>
-                      )}
-                      {l.ferie && !l.saisie && (
-                        <span className="badge en_attente">Férié — {l.ferie.label}</span>
-                      )}
-                      {!l.saisie && !l.conge && !l.ferie && l.weekend && (
-                        <span className="muted">week-end</span>
-                      )}
-                    </td>
-                  </tr>
-                  {/* Sous-total en fin de semaine (ou fin de mois) : les heures
-                      sup se calculent PAR SEMAINE, pas par jour. */}
-                  {(i === lignes.length - 1 ||
-                    isoLundi(lignes[i + 1].date) !== isoLundi(l.date)) &&
-                    (() => {
-                      const s = semaines.get(isoLundi(l.date))
-                      if (!s || s.total === 0) return null
-                      return (
-                        <tr className="semaine-total">
-                          <td colSpan={2}>
-                            <strong>Semaine du {formatDateFrNum(isoLundi(l.date))}</strong>
-                            {s.horsMois && (
-                              <span className="muted"> — à cheval sur deux mois</span>
-                            )}
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <strong>{formatMinutes(s.total)}</strong>
-                          </td>
-                          <td>
-                            {s.sup > 0 ? (
-                              <span className="badge en_attente">
-                                dont {formatMinutes(s.sup)} sup
-                              </span>
-                            ) : (
-                              <span className="muted">pas d'heures sup</span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })()}
-                  </Fragment>
-                ))}
+                {semainesAffichees.map((sem) => {
+                  const stats = semaines.get(sem.lundi)
+                  const ouverte = ouvertes.has(sem.lundi)
+                  // Nombre de jours réellement renseignés (saisie ou congé) :
+                  // évite d'ouvrir une semaine vide pour rien.
+                  const nbRenseignes = sem.jours.filter(
+                    (j) => j.saisie || j.conge,
+                  ).length
+                  return (
+                    <Fragment key={sem.lundi}>
+                      {/* --- Ligne SEMAINE : cliquable pour déplier le détail --- */}
+                      <tr className="semaine-total">
+                        <td colSpan={2}>
+                          <button
+                            type="button"
+                            className="btn-lien"
+                            aria-expanded={ouverte}
+                            onClick={() => toggleSemaine(sem.lundi)}
+                          >
+                            <span aria-hidden="true">{ouverte ? '▼' : '▶'}</span>{' '}
+                            <strong>
+                              Semaine du {formatDateFrNum(sem.lundi)}
+                            </strong>
+                          </button>
+                          {stats?.horsMois && (
+                            <span className="muted"> — à cheval sur deux mois</span>
+                          )}
+                          <span className="muted">
+                            {' '}
+                            · {nbRenseignes} jour{nbRenseignes > 1 ? 's' : ''} renseigné
+                            {nbRenseignes > 1 ? 's' : ''}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <strong>{formatMinutes(stats?.total ?? 0)}</strong>
+                        </td>
+                        <td>
+                          {stats && stats.sup > 0 ? (
+                            <span className="badge en_attente">
+                              dont {formatMinutes(stats.sup)} sup
+                            </span>
+                          ) : (
+                            <span className="muted">pas d'heures sup</span>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* --- Détail jour par jour (visible si la semaine est ouverte) --- */}
+                      {ouverte &&
+                        sem.jours.map((l) => (
+                          <tr key={l.date} className={l.weekend ? 'muted' : undefined}>
+                            <td style={{ paddingLeft: '1.5rem' }}>{l.jourLabel}</td>
+                            <td>
+                              {l.saisie ? (
+                                describeHoraires(l.saisie)
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {l.saisie ? (
+                                formatMinutes(l.saisie.totalMinutes)
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
+                            <td>
+                              {l.saisie && <StatusBadge statut={l.saisie.statut} />}
+                              {l.conge && (
+                                <span className="badge validee">
+                                  🌴 {labelDe(l.conge.type)}
+                                </span>
+                              )}
+                              {l.ferie && !l.saisie && (
+                                <span className="badge en_attente">
+                                  Férié — {l.ferie.label}
+                                </span>
+                              )}
+                              {!l.saisie && !l.conge && !l.ferie && l.weekend && (
+                                <span className="muted">week-end</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>
