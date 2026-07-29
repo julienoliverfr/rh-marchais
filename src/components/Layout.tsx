@@ -82,6 +82,7 @@ export default function Layout() {
                 </span>
               )}
             </NavLink>
+            <NavLink to="/responsable/feuille">Feuille mensuelle</NavLink>
             <NavLink to="/responsable/exports">Exports</NavLink>
             <NavLink to="/responsable/admin">Administration</NavLink>
             {responsableSalarie && (

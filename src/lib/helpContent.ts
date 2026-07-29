@@ -84,6 +84,14 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       'Après export, les saisies sont verrouillées : seul un responsable peut les rouvrir.',
     ],
   },
+  '/responsable/feuille': {
+    title: 'Feuille mensuelle',
+    lines: [
+      'Choisissez un collaborateur et un mois : vous voyez chaque jour, ses heures et son statut.',
+      'Les congés validés, les jours fériés et les week-ends sont indiqués.',
+      'Les totaux en bas suivent exactement les règles de l’export comptable.',
+    ],
+  },
   '/saisie-collegue': {
     title: 'Saisir pour un collègue',
     lines: [
