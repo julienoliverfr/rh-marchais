@@ -868,9 +868,22 @@ export class SupabaseRepository implements Repository {
       }
       this.saveCollaborateur(collaborateur)
 
-      // TODO runtime : créer le compte d'accès (Supabase Auth) + profil lié.
-      // Le mot de passe (row.motDePasse) ne doit JAMAIS être persisté en clair ;
-      // il sert uniquement à l'invitation côté serveur (fonction admin).
+      // Compte de connexion : même chemin privilégié que la création manuelle
+      // (fonction SECURITY DEFINER `admin_create_login`, garde « responsable »).
+      // Sans lui, les personnes importées ne pouvaient PAS se connecter, et un
+      // ré-import créait des doublons (le contrôle d'unicité s'appuie sur les
+      // profils, qui restaient vides). Le mot de passe n'est jamais persisté en
+      // clair : il ne sert qu'à l'appel de création.
+      if (row.creerCompte) {
+        this.createLogin({
+          id: collabId,
+          identifiant: row.identifiant,
+          motDePasse: row.motDePasse,
+          role: 'employe',
+          collaborateurId: collabId,
+          nomAffichage: `${row.prenom} ${row.nom}`.trim(),
+        })
+      }
 
       const soldesRow: Partial<Record<CongeType, number>> = { ...(row.soldesInitiaux ?? {}) }
       if (row.soldeInitial != null && soldesRow.conge_paye == null) {

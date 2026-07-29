@@ -159,6 +159,19 @@ export default function ImportCollaborateurs() {
       render: (r) => r.raw.famille || '—',
     },
     {
+      key: 'compte',
+      label: 'Compte',
+      align: 'center',
+      sortable: true,
+      sortAccessor: (r) => (r.raw.creerCompte ? 1 : 0),
+      render: (r) =>
+        r.raw.creerCompte ? (
+          <span className="badge validee">Créé</span>
+        ) : (
+          <span className="muted">Sans accès</span>
+        ),
+    },
+    {
       key: 'modele',
       label: 'Modèle',
       sortable: true,
@@ -242,6 +255,10 @@ export default function ImportCollaborateurs() {
             <strong>{buildImportHeaders(typesSolde).join(' · ')}</strong>.
             <br />
             Requis : Nom, Prénom, Identifiant, Équipe, Modèle de contrat.
+            La colonne « Créer un compte » (oui/non, vide = oui) permet
+            d'importer un collaborateur <strong>sans accès</strong> à
+            l'application : ses heures seront saisies par un responsable ou un
+            collègue délégué.
             Optionnels : Date d'entrée (AAAA-MM-JJ ou JJ/MM/AAAA), un solde
             initial par type à solde (nombre, virgule FR), Mot de passe (défaut
             «&nbsp;{MOT_DE_PASSE_DEFAUT}&nbsp;» si vide).

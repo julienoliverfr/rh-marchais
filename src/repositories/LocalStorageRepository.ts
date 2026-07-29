@@ -328,15 +328,18 @@ export class LocalStorageRepository implements Repository {
         },
       })
 
-      // Compte de connexion rattaché (rôle employé).
-      nouveauxComptes.push({
-        id: genId('cpt'),
-        identifiant: row.identifiant,
-        motDePasse: row.motDePasse,
-        role: 'employe',
-        collaborateurId: collabId,
-        nomAffichage: `${row.prenom} ${row.nom}`,
-      })
+      // Compte de connexion rattaché (rôle employé), sauf si la colonne
+      // « Créer un compte » vaut « non » (collaborateur sans accès à l'appli).
+      if (row.creerCompte) {
+        nouveauxComptes.push({
+          id: genId('cpt'),
+          identifiant: row.identifiant,
+          motDePasse: row.motDePasse,
+          role: 'employe',
+          collaborateurId: collabId,
+          nomAffichage: `${row.prenom} ${row.nom}`,
+        })
+      }
 
       // Solde initial PAR TYPE à solde → override d'allocation sur la période
       // courante DE CHAQUE type (même structure que setAllocation, prime sur le

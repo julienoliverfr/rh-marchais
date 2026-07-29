@@ -433,6 +433,10 @@ export interface ImportCollaborateurRow {
   familleId: string
   modeleId: string
   motDePasse: string
+  // Créer le compte de connexion associé ? Colonne « Créer un compte » du
+  // fichier (oui/non, vide = oui). `false` = collaborateur SANS accès à
+  // l'application : ses heures sont saisies par un responsable ou un délégué.
+  creerCompte: boolean
   dateDebut?: string // ISO yyyy-mm-dd si fournie (sinon acquis non proratisé)
   // Legacy (Étape 4) : ancienne colonne « Solde congés initial » = solde CP.
   // Conservé pour la rétrocompatibilité ; replié dans `soldesInitiaux.conge_paye`

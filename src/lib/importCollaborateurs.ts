@@ -51,8 +51,11 @@ const HEADERS_AVANT_SOLDES = [
   "Date d'entrée",
 ] as const
 
-// Colonne finale.
+// Colonnes finales.
 const HEADER_MOT_DE_PASSE = 'Mot de passe'
+// Colonne OPTIONNELLE : « non » = collaborateur sans accès à l'application.
+// Absente ou vide = on crée le compte (cas courant).
+const HEADER_CREER_COMPTE = 'Créer un compte'
 
 // Legacy : ancienne colonne unique de solde CP (reconnue en lecture uniquement).
 const HEADER_SOLDE_LEGACY = 'Solde congés initial'
@@ -78,6 +81,7 @@ export function buildImportHeaders(typesSolde: TypeSoldeInfo[]): string[] {
     ...HEADERS_AVANT_SOLDES,
     ...typesSolde.map((t) => soldeHeader(t.label)),
     HEADER_MOT_DE_PASSE,
+    HEADER_CREER_COMPTE,
   ]
 }
 
@@ -99,6 +103,7 @@ function exempleRow(typesSolde: TypeSoldeInfo[]): string[] {
     '01/06/2026',
     ...typesSolde.map((t) => EXEMPLE_SOLDE[t.code] ?? ''),
     MOT_DE_PASSE_DEFAUT,
+    'oui',
   ]
 }
 
@@ -117,6 +122,8 @@ export interface RawImportRow {
   // Rendu lisible des soldes fournis (pour l'aperçu), ex. « Congé payé : 25 ».
   soldeAffichage: string
   motDePasse: string
+  // Colonne optionnelle « Créer un compte » (oui/non). Vide = oui.
+  creerCompte: boolean
 }
 
 // Ligne après validation : statut + détail des erreurs + charge utile si valide.
@@ -294,6 +301,7 @@ function matrixToRows(
   const idxModele = colOf('Modèle de contrat')
   const idxDate = colOf("Date d'entrée")
   const idxMdp = colOf(HEADER_MOT_DE_PASSE)
+  const idxCreer = colOf(HEADER_CREER_COMPTE)
   const idxLegacy = colOf(HEADER_SOLDE_LEGACY)
   // Index de la colonne de solde par type (−1 si absente du fichier).
   const idxSolde = new Map<CongeType, number>()
@@ -330,6 +338,9 @@ function matrixToRows(
       soldes,
       soldeAffichage,
       motDePasse: cell(cells, idxMdp),
+      // Colonne absente ou vide = on crée le compte. Seul un « non » explicite
+      // (ou 0 / false) crée le collaborateur SANS accès à l'application.
+      creerCompte: !/^(non|no|n|0|false)$/i.test(cell(cells, idxCreer)),
     }
   })
 
@@ -386,7 +397,15 @@ export function validateImportRows(
   rows: RawImportRow[],
   ctx: ValidationContext,
 ): ValidatedImportRow[] {
-  const existing = new Set(ctx.existingIdentifiants.map((s) => s.toLowerCase()))
+  // Les comptes existants sont stockés sous forme d'e-mail (« camille@demo.local »)
+  // alors que le fichier contient l'identifiant nu (« camille ») : sans cette
+  // normalisation, AUCUN doublon n'était détecté et un ré-import dupliquait tout.
+  const idNu = (s: string): string => {
+    const v = s.trim().toLowerCase()
+    const at = v.indexOf('@')
+    return at > 0 ? v.slice(0, at) : v
+  }
+  const existing = new Set(ctx.existingIdentifiants.map(idNu))
 
   // Comptage des identifiants dans le fichier (détection des doublons internes).
   const counts = new Map<string, number>()
@@ -423,7 +442,7 @@ export function validateImportRows(
 
     // Identifiant unique : ni déjà en base, ni dupliqué dans le fichier.
     if (identifiant) {
-      if (existing.has(identifiant)) {
+      if (existing.has(idNu(identifiant))) {
         errors.push(`Identifiant « ${identifiant} » déjà utilisé en base.`)
       } else if ((counts.get(identifiant) ?? 0) > 1) {
         errors.push(`Identifiant « ${identifiant} » en double dans le fichier.`)
@@ -470,6 +489,7 @@ export function validateImportRows(
             familleId: famille.id,
             modeleId: modele.id,
             motDePasse: r.motDePasse.trim() || MOT_DE_PASSE_DEFAUT,
+            creerCompte: r.creerCompte,
             dateDebut,
             soldeInitial,
             soldesInitiaux,
