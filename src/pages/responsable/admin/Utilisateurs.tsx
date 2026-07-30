@@ -127,12 +127,11 @@ export default function Utilisateurs() {
         // profil n'expose pas de mot de passe (chaîne vide, ignorée).
         motDePasse: existant?.motDePasse ?? '',
         role: draft.role,
-        collaborateurId:
-          draft.role === 'employe' && draft.collaborateurId
-            ? draft.collaborateurId
-            : undefined,
+        // Le rattachement vaut pour TOUS les rôles : un responsable est aussi
+        // un salarié — il travaille, pose des congés et saisit ses heures.
+        collaborateurId: draft.collaborateurId || undefined,
         collaborateursSecondaires:
-          draft.role === 'employe' && draft.collaborateursSecondaires.length > 0
+          draft.collaborateursSecondaires.length > 0
             ? draft.collaborateursSecondaires
             : undefined,
         nomAffichage: defautNomAffichage(draft),
@@ -171,12 +170,10 @@ export default function Utilisateurs() {
       identifiant,
       motDePasse: draft.motDePasse,
       role: draft.role,
-      collaborateurId:
-        draft.role === 'employe' && draft.collaborateurId
-          ? draft.collaborateurId
-          : undefined,
+      // Voir plus haut : le rattachement ne dépend pas du rôle.
+      collaborateurId: draft.collaborateurId || undefined,
       collaborateursSecondaires:
-        draft.role === 'employe' && draft.collaborateursSecondaires.length > 0
+        draft.collaborateursSecondaires.length > 0
           ? draft.collaborateursSecondaires
           : undefined,
       nomAffichage: defautNomAffichage(draft),
@@ -366,13 +363,7 @@ export default function Utilisateurs() {
                 aria-invalid={errors.role ? true : undefined}
                 aria-describedby={errors.role ? 'user-role-err' : undefined}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    role: e.target.value as Role,
-                    // Un responsable n'est pas rattaché à un collaborateur.
-                    collaborateurId:
-                      e.target.value === 'responsable' ? '' : draft.collaborateurId,
-                  })
+                  setDraft({ ...draft, role: e.target.value as Role })
                 }
               >
                 <option value="employe">Employé</option>
@@ -380,30 +371,38 @@ export default function Utilisateurs() {
               </select>
               <FieldError id="user-role-err" message={errors.role} />
             </div>
-            {draft.role === 'employe' && (
-              <div className="form-row">
-                <label htmlFor="collab">Collaborateur rattaché</label>
-                <select
-                  id="collab"
-                  value={draft.collaborateurId}
-                  onChange={(e) =>
-                    setDraft({ ...draft, collaborateurId: e.target.value })
-                  }
-                >
-                  <option value="">— Aucun —</option>
-                  {collaborateurs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.prenom} {c.nom}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Proposé pour TOUS les rôles. Un responsable est le plus souvent
+                salarié lui aussi : sans rattachement, il ne pourrait ni saisir
+                ses heures ni poser ses propres congés. Facultatif malgré tout,
+                pour un compte purement administratif. */}
+            <div className="form-row">
+              <label htmlFor="collab">Collaborateur rattaché</label>
+              <select
+                id="collab"
+                value={draft.collaborateurId}
+                onChange={(e) =>
+                  setDraft({ ...draft, collaborateurId: e.target.value })
+                }
+              >
+                <option value="">— Aucun —</option>
+                {collaborateurs.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.prenom} {c.nom}
+                  </option>
+                ))}
+              </select>
+              {draft.role === 'responsable' && !draft.collaborateurId && (
+                <p className="hint">
+                  Sans rattachement, ce responsable ne pourra pas saisir ses
+                  propres heures ni poser ses congés.
+                </p>
+              )}
+            </div>
             {/* CUMUL DE CONTRATS : une même personne peut avoir deux contrats
                 (deux mi-temps). On rattache alors les deux au MÊME compte : une
                 seule connexion, mais chaque contrat garde son solde de congés et
                 son seuil d'heures supplémentaires. */}
-            {draft.role === 'employe' && draft.collaborateurId && (
+            {draft.collaborateurId && (
               <div className="form-row">
                 <label>Autres contrats de cette personne</label>
                 <div
