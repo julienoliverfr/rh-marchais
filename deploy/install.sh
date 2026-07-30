@@ -79,6 +79,25 @@ setenv SITE_URL            "http://$PUBLIC_IP"
 setenv API_EXTERNAL_URL    "$API_URL"
 setenv SUPABASE_PUBLIC_URL "$API_URL"
 
+log "[5b/9] Durcissement réseau : la base ne doit PAS être joignable d'Internet"
+# Par défaut, le pooler Supabase publie PostgreSQL sur 0.0.0.0:5432 — donc en
+# accès direct depuis Internet, ce qui CONTOURNE toute la sécurité RLS. On lie
+# ces ports à l'interface locale. Le port 8000 (API) reste public : le front
+# l'appelle directement tant qu'HTTPS n'est pas en place.
+sed -i 's|^\( *\)- \${POSTGRES_PORT}:5432$|\1- 127.0.0.1:${POSTGRES_PORT}:5432|' "$SUPA_DIR/docker-compose.yml"
+sed -i 's|^\( *\)- \${POOLER_PROXY_PORT_TRANSACTION}:6543$|\1- 127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION}:6543|' "$SUPA_DIR/docker-compose.yml"
+sed -i 's|^\( *\)- \${KONG_HTTPS_PORT}:8443/tcp$|\1- 127.0.0.1:${KONG_HTTPS_PORT}:8443/tcp|' "$SUPA_DIR/docker-compose.yml"
+
+# Pare-feu (défense complémentaire : il ne gouverne pas les ports publiés par
+# Docker, d'où le durcissement ci-dessus). SSH autorisé AVANT activation.
+if command -v ufw >/dev/null 2>&1; then
+  ufw allow 22/tcp   comment 'SSH administration'      >/dev/null 2>&1 || true
+  ufw allow 80/tcp   comment 'Application (HTTP)'      >/dev/null 2>&1 || true
+  ufw allow 443/tcp  comment 'Application (HTTPS)'     >/dev/null 2>&1 || true
+  ufw allow 8000/tcp comment 'API Supabase (front)'    >/dev/null 2>&1 || true
+  ufw --force enable >/dev/null 2>&1 || true
+fi
+
 log "[6/9] Démarrage de la base de données et de l'authentification"
 cd "$SUPA_DIR"
 docker compose pull
@@ -140,6 +159,12 @@ VITE_SUPABASE_URL="http://$IP:8000" VITE_SUPABASE_ANON_KEY="$ANON" npm run build
 echo "$(date) — application mise a jour"
 UPD
 chmod +x /opt/rh-update.sh
+
+log "[+] Sauvegarde automatique de la base (chaque nuit, vérifiée, 14 jours)"
+install -m 755 "$APP_DIR/deploy/backup.sh" /opt/rh-backup.sh
+( crontab -l 2>/dev/null | grep -v 'rh-backup.sh' ; \
+  echo "30 2 * * * /opt/rh-backup.sh >> /var/log/rh-backup.log 2>&1" ) | crontab -
+bash /opt/rh-backup.sh || echo "  (première sauvegarde à vérifier manuellement)"
 ( crontab -l 2>/dev/null | grep -v 'rh-update.sh' ; echo "*/3 * * * * /opt/rh-update.sh >> /var/log/rh-update.log 2>&1" ) | crontab -
 
 # Récapitulatif
