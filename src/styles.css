@@ -141,10 +141,22 @@ a {
 
 /* Espace responsable / admin (data-heavy) : conteneur large et fluide pour que
    les tableaux respirent sans scroll horizontal, avec un padding latéral. */
+/* Espace responsable : large, mais BORNÉ. Une ligne de tableau qui traverse un
+   écran de 1900 px se perd — l'œil décroche entre le nom, à gauche, et la
+   valeur à l'extrême droite. Le `94vw` évite en plus qu'un écran ultra-large
+   n'étire le contenu au-delà du raisonnable. */
 .content.is-wide {
-  max-width: 1340px;
+  max-width: min(1600px, 94vw);
   padding-left: 1.25rem;
   padding-right: 1.25rem;
+}
+
+/* Grille des présences : le seul écran qui gagne VRAIMENT à s'étendre. Ses
+   colonnes de jour font une trentaine de pixels ; la largeur supplémentaire ne
+   sert pas à écarter des colonnes, elle agrandit des cases qu'on lit d'un coup
+   d'œil. Le compromis lisibilité ne se pose donc pas de la même façon. */
+.content.is-xwide {
+  max-width: min(1900px, 97vw);
 }
 
 /* En-tête de page homogène : titre + action primaire sur une même ligne. */
@@ -1738,6 +1750,11 @@ a:focus-visible,
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.8rem;
+  /* Sans cela, la table se dimensionne sur son contenu : la largeur gagnée sur
+     grand écran laisserait du vide à droite au lieu d'agrandir les cases. Les
+     `min-width` des colonnes garantissent qu'elle déborde et défile quand la
+     place manque, au lieu de se comprimer. */
+  width: 100%;
 }
 
 .pr-table th,

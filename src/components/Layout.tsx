@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useDataStore } from '../store/dataStore'
 import ContextualHelp from './ContextualHelp'
@@ -15,6 +15,10 @@ export default function Layout() {
   const navigate = useNavigate()
 
   const isResponsable = session?.role === 'responsable'
+  const { pathname } = useLocation()
+  // La grille des présences est le seul écran assez dense pour justifier une
+  // largeur supérieure au reste de l'espace responsable (voir `.is-xwide`).
+  const isXWide = pathname.startsWith('/responsable/presences')
   // Employé délégué : a-t-il au moins un collègue à saisir (liste définie par
   // l'admin) ? Conditionne l'entrée de menu « Saisie pour un collègue ».
   const peutSaisirPourCollegue =
@@ -103,7 +107,11 @@ export default function Layout() {
 
       {/* Largeur adaptée au contexte : colonne étroite pour l'espace employé,
           conteneur large et fluide pour l'espace responsable / admin (data-heavy). */}
-      <main className={`content${isResponsable ? ' is-wide' : ''}`}>
+      <main
+        className={`content${isResponsable ? ' is-wide' : ''}${
+          isResponsable && isXWide ? ' is-xwide' : ''
+        }`}
+      >
         {/* Au-dessus du contenu, sur TOUS les écrans du responsable : une
             absence imminente ne doit pas dépendre de la page où il se trouve. */}
         <AlerteAbsences />
