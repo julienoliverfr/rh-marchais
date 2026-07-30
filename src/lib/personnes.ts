@@ -62,3 +62,40 @@ export function cumulSemainePersonne(
     depassement: totalMinutes > PLAFOND_HEBDO_HEURES * 60,
   }
 }
+
+// ============================================================================
+// LIBELLÉS UNIQUES de collaborateurs.
+//
+// Deux personnes peuvent porter le même nom, et une même personne à deux
+// contrats apparaît DEUX fois dans la liste. Sans libellé distinct, un champ de
+// recherche ne sait pas laquelle choisir et un tableau devient indéchiffrable.
+//
+// On désambiguïse par l'équipe, puis — si cela ne suffit toujours pas — par un
+// suffixe numéroté.
+// ============================================================================
+
+export interface LibellesCollaborateurs {
+  // id → libellé affiché (unique).
+  labelParId: Map<string, string>
+  // libellé en minuscules → id, pour retrouver la personne à partir du texte saisi.
+  idParLabel: Map<string, string>
+}
+
+export function libellesUniques(
+  collaborateurs: { id: string; prenom: string; nom: string; familleId: string }[],
+  familles?: { id: string; nom: string }[],
+): LibellesCollaborateurs {
+  const vus = new Map<string, number>()
+  const labelParId = new Map<string, string>()
+  const idParLabel = new Map<string, string>()
+  for (const c of collaborateurs) {
+    const equipe = familles?.find((f) => f.id === c.familleId)?.nom
+    const base = `${c.prenom} ${c.nom}${equipe ? ` — ${equipe}` : ''}`.trim()
+    const n = (vus.get(base) ?? 0) + 1
+    vus.set(base, n)
+    const affiche = n === 1 ? base : `${base} (${n})`
+    labelParId.set(c.id, affiche)
+    idParLabel.set(affiche.toLowerCase(), c.id)
+  }
+  return { labelParId, idParLabel }
+}

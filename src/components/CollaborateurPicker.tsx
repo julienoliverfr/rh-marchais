@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react'
 import type { Collaborateur, Famille } from '../types'
+import { libellesUniques } from '../lib/personnes'
 
 // ============================================================================
 // CollaborateurPicker — choix d'un collaborateur EN TAPANT son nom.
@@ -34,21 +35,11 @@ export default function CollaborateurPicker({
   const listId = `${inputId}-options`
 
   // Libellés d'affichage UNIQUES (équipe en complément, puis suffixe si besoin).
-  const { labelParId, idParLabel } = useMemo(() => {
-    const vus = new Map<string, number>()
-    const labelParId = new Map<string, string>()
-    const idParLabel = new Map<string, string>()
-    for (const c of collaborateurs) {
-      const equipe = familles?.find((f) => f.id === c.familleId)?.nom
-      const base = `${c.prenom} ${c.nom}${equipe ? ` — ${equipe}` : ''}`.trim()
-      const n = (vus.get(base) ?? 0) + 1
-      vus.set(base, n)
-      const affiche = n === 1 ? base : `${base} (${n})`
-      labelParId.set(c.id, affiche)
-      idParLabel.set(affiche.toLowerCase(), c.id)
-    }
-    return { labelParId, idParLabel }
-  }, [collaborateurs, familles])
+  // Logique partagée avec le sélecteur multiple : voir lib/personnes.
+  const { labelParId, idParLabel } = useMemo(
+    () => libellesUniques(collaborateurs, familles),
+    [collaborateurs, familles],
+  )
 
   const labelDe = (c: Collaborateur) =>
     labelParId.get(c.id) ?? `${c.prenom} ${c.nom}`

@@ -18,6 +18,7 @@ import {
 } from '../../lib/presences'
 import Breadcrumb from '../../components/Breadcrumb'
 import EmptyState from '../../components/EmptyState'
+import CollaborateurMultiPicker from '../../components/CollaborateurMultiPicker'
 
 // ============================================================================
 // Présences du mois — vue d'ENSEMBLE : « qui est là, et où sont les trous ? »
@@ -73,6 +74,8 @@ export default function Presences() {
   const [mois, setMois] = useState<string>(currentMonthKey())
   const [familleId, setFamilleId] = useState<string>('')
   const [avecSortis, setAvecSortis] = useState(false)
+  // Sélection explicite de personnes. Vide = tout le monde.
+  const [choisis, setChoisis] = useState<string[]>([])
 
   const aujourdhui = toISODate(new Date())
   const jours = useMemo(() => joursDuMois(mois), [mois])
@@ -92,12 +95,17 @@ export default function Presences() {
   const debutDuMois = jours[0] ?? `${mois}-01`
 
   const lignes = useMemo(() => {
+    const selection = new Set(choisis)
     const retenus = collaborateurs
-      .filter((c) => !familleId || c.familleId === familleId)
       .filter((c) => {
-        if (!c.dateSortie) return true
-        if (c.dateSortie >= debutDuMois) return true // parti en cours de mois
-        return avecSortis
+        // Une sélection nominative PRIME sur les autres filtres : désigner
+        // quelqu'un puis ne pas le voir — parce qu'il est dans une autre équipe
+        // ou sorti des effectifs — serait incompréhensible.
+        if (selection.size) return selection.has(c.id)
+        if (familleId && c.familleId !== familleId) return false
+        // Parti en cours de mois : on le garde, il a travaillé une partie du mois.
+        if (c.dateSortie && c.dateSortie < debutDuMois && !avecSortis) return false
+        return true
       })
       .sort((a, b) =>
         `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'),
@@ -131,6 +139,7 @@ export default function Presences() {
     familleId,
     avecSortis,
     debutDuMois,
+    choisis,
   ])
 
   // Deux personnes peuvent porter le même nom (cas des deux contrats) : on
@@ -196,6 +205,7 @@ export default function Presences() {
               value={familleId}
               onChange={(e) => setFamilleId(e.target.value)}
               aria-label="Filtrer par équipe"
+              disabled={choisis.length > 0}
             >
               <option value="">Toutes</option>
               {familles.map((f) => (
@@ -211,9 +221,28 @@ export default function Presences() {
               type="checkbox"
               checked={avecSortis}
               onChange={(e) => setAvecSortis(e.target.checked)}
+              disabled={choisis.length > 0}
             />
             <span>Afficher les sortis</span>
           </label>
+        </div>
+
+        {/* Filtre nominatif. Placé SOUS les autres : on s'en sert pour affiner
+            une vue d'ensemble, pas pour l'ouvrir. */}
+        <div style={{ marginTop: '0.9rem' }}>
+          <CollaborateurMultiPicker
+            collaborateurs={collaborateurs}
+            familles={familles}
+            value={choisis}
+            onChange={setChoisis}
+            label="Collaborateurs (vide = tous)"
+          />
+          {choisis.length > 0 && (
+            <p className="muted" style={{ fontSize: '0.8rem', margin: '0.4rem 0 0' }}>
+              Sélection nominative active : les filtres Équipe et « sortis » sont
+              ignorés, pour que les personnes désignées soient toujours visibles.
+            </p>
+          )}
         </div>
 
         {/* Légende : sans elle, les symboles sont indéchiffrables. */}

@@ -1911,3 +1911,75 @@ a:focus-visible,
 .alerte-absences-attente .btn {
   margin-top: 0.5rem;
 }
+
+/* --------------------------------------------------------------------------
+   Sélecteur de PLUSIEURS collaborateurs (étiquettes retirables).
+   -------------------------------------------------------------------------- */
+.multi-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.multi-picker-champ {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.multi-picker-champ input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  width: auto;
+}
+
+.multi-picker-etiquettes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.multi-picker-etiquettes li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.6rem;
+  background: var(--navy-soft);
+  color: var(--navy);
+  border: 1px solid var(--navy);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.multi-picker-etiquettes button {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.multi-picker-etiquettes button:hover {
+  background: var(--navy);
+  color: #fff;
+}
+
+@media (pointer: coarse) {
+  /* La croix de retrait est petite par nature : on étend sa zone tactile sans
+     grossir l'étiquette, qui deviendrait sinon envahissante à plusieurs noms. */
+  .multi-picker-etiquettes button {
+    position: relative;
+  }
+  .multi-picker-etiquettes button::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+}
