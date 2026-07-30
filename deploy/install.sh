@@ -109,6 +109,11 @@ for i in $(seq 1 24); do
   echo "  …base pas encore prête ($i)"; sleep 5
 done
 
+log "[6b/9] Réduction de la pile aux services réellement utilisés"
+# Supprime notamment le Studio (interface d'administration de la base, exposée
+# et protégée par un simple mot de passe) et libère ~1 Go de mémoire.
+bash "$APP_DIR/deploy/alleger-pile.sh" || echo "  (allègement à vérifier manuellement)"
+
 log "[7/9] Création du schéma, des règles de sécurité, puis des comptes de démo"
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/schema.sql"
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/rls.sql"
