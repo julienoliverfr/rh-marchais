@@ -358,6 +358,54 @@ textarea:focus {
   textarea {
     font-size: 16px;
   }
+
+  /* Les listes déroulantes plafonnaient à ~38 px : sous le seuil confortable,
+     alors qu'elles portent les filtres les plus utilisés. */
+  select,
+  input[type='date'],
+  input[type='time'],
+  input[type='number'],
+  input[type='search'],
+  input[type='text'],
+  input[type='password'] {
+    min-height: 44px;
+  }
+
+  /* Entrées de navigation : 36 à 40 px selon le libellé. Ce sont les cibles les
+     plus sollicitées de l'application — elles doivent être les plus sûres. */
+  .nav a,
+  .bottomnav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* CASES À COCHER : 13 × 13 px, de loin le pire cas. Contexte agricole, doigts
+     parfois gantés — on agrandit la case ET on donne au libellé qui l'entoure
+     une hauteur confortable, puisque cliquer le libellé coche la case. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 22px;
+    height: 22px;
+  }
+  label:has(> input[type='checkbox']),
+  label:has(> input[type='radio']) {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* Fil d'Ariane : 17 px de haut. On étend la zone tactile par un
+     pseudo-élément plutôt que par du remplissage, pour ne pas déplacer le
+     titre de la page qui le suit immédiatement. */
+  .breadcrumb a {
+    position: relative;
+  }
+  .breadcrumb a::after {
+    content: '';
+    position: absolute;
+    inset: -13px -8px;
+  }
 }
 
 /* Bouton présenté comme un lien (en-tête de semaine dépliable) */
