@@ -25,7 +25,22 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y curl git ca-certificates openssl jq
 if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sh; fi
-if ! command -v node   >/dev/null 2>&1; then curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs; fi
+
+# Node : on PRIVILÉGIE le paquet de la distribution. NodeSource ne publie pas
+# de dépôt pour les versions récentes d'Ubuntu (404 sur 26.04 « resolute »), ce
+# qui faisait échouer l'installation. Le paquet Ubuntu (Node 22) convient
+# parfaitement à la construction du front. NodeSource ne sert plus que de repli
+# pour les distributions anciennes dont le paquet est trop vieux.
+node_version_majeure() { node -v 2>/dev/null | sed 's/^v\([0-9]*\).*/\1/'; }
+if ! command -v node >/dev/null 2>&1; then
+  apt-get install -y nodejs npm || true
+fi
+if [ "$(node_version_majeure || echo 0)" -lt 20 ] 2>/dev/null; then
+  echo "  Node absent ou trop ancien -> tentative via NodeSource"
+  curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs
+fi
+command -v node >/dev/null 2>&1 || { echo "ÉCHEC : Node.js indisponible." >&2; exit 1; }
+echo "  Node $(node -v) · npm $(npm -v 2>/dev/null)"
 
 log "[3/9] Téléchargement de Supabase (Docker) et de l'application"
 rm -rf /tmp/supabase-src
