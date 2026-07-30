@@ -12,7 +12,10 @@ set -euo pipefail
 REPO="https://github.com/julienoliverfr/rh-marchais.git"
 APP_DIR="/opt/rh-marchais"
 SUPA_DIR="/opt/supabase"
-DEMO_PASSWORD="demo1234"   # mot de passe des 3 comptes de démonstration
+# Mot de passe des 3 comptes de démonstration. La valeur par défaut est publique
+# (le dépôt est ouvert) : sur un serveur destiné à un usage réel, la surcharger
+#   DEMO_PASSWORD='...' bash deploy/install.sh
+DEMO_PASSWORD="${DEMO_PASSWORD:-demo1234}"
 
 log(){ echo -e "\n\033[1;34m==> $*\033[0m"; }
 
