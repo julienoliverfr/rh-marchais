@@ -38,10 +38,25 @@ t=t.replace(/(\n  kong:[\s\S]*?)\n    depends_on:\n      studio:\n        condit
 fs.writeFileSync('docker-compose.yml',t);
 " 2>/dev/null || true
 
-# shellcheck disable=SC2086
-docker compose stop $INUTILES >/dev/null 2>&1
-# shellcheck disable=SC2086
-docker compose rm -f $INUTILES >/dev/null 2>&1
+# On ne cible que les services RÉELLEMENT présents. La composition de la pile
+# varie d'une version de Supabase à l'autre (« vector » a par exemple disparu) :
+# or `docker compose stop` échoue EN BLOC sur un service inconnu et n'arrête
+# alors plus rien. Filtrer évite cet échec silencieux.
+PRESENTS=$(docker compose config --services 2>/dev/null)
+A_RETIRER=""
+for s in $INUTILES; do
+  echo "$PRESENTS" | grep -qx "$s" && A_RETIRER="$A_RETIRER $s"
+done
+
+if [ -z "$A_RETIRER" ]; then
+  echo "==> Aucun service superflu à retirer."
+else
+  echo "==> Retrait :$A_RETIRER"
+  # shellcheck disable=SC2086
+  docker compose stop $A_RETIRER >/dev/null || echo "  (arrêt partiel)"
+  # shellcheck disable=SC2086
+  docker compose rm -f $A_RETIRER >/dev/null || echo "  (suppression partielle)"
+fi
 
 echo "==> Pile réduite. Conteneurs actifs :"
 docker compose ps --format '  {{.Service}} ({{.State}})' 2>/dev/null
