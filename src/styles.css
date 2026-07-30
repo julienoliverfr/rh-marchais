@@ -1700,9 +1700,13 @@ a:focus-visible,
   border-right: 1px solid var(--border);
   min-width: 11rem;
 }
+/* Le padding est redonné ICI explicitement : la règle `.pr-table thead th`
+   ci-dessous est plus spécifique que `.pr-nom` (deux sélecteurs contre un) et
+   l'emportait malgré le `!important`, collant le titre au bord de la cellule. */
 .pr-table thead .pr-nom {
   z-index: 3;
   background: var(--surface-2);
+  padding: 0.45rem 0.7rem !important;
 }
 
 .pr-table thead th {
