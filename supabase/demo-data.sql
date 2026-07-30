@@ -25,6 +25,12 @@ delete from public.exports    where id::text like 'dddd%';
 delete from public.saisies    where collaborateur_id::text like 'dddd%';
 delete from public.conges     where collaborateur_id::text like 'dddd%';
 delete from public.contrats   where collaborateur_id::text like 'dddd%';
+-- Les comptes pointent vers ces fiches : sans détacher d'abord, la suppression
+-- violerait la clé étrangère et le script ne serait plus rejouable. Les liens
+-- sont rétablis plus bas, une fois les fiches recréées.
+update public.profiles
+   set collaborateur_id = null, collaborateurs_secondaires = null
+ where collaborateur_id::text like 'dddd%';
 delete from public.collaborateurs where id::text like 'dddd%';
 
 -- 2) Heures et congés PRÉEXISTANTS sur la période de démonstration : ils
@@ -43,11 +49,15 @@ update public.familles set activite_obligatoire = true
 -- 1) Camille Dubois — DEUX contrats à mi-temps (Vignes + Marchais).
 -- 2) Théo Lambert  — saisonnier vendanges, congés en jours OUVRABLES.
 -- 3) Marie Sorel   — SORTIE des effectifs (montre le badge « Sorti »).
+-- 4) Sophie Marchais — la RESPONSABLE, qui est aussi salariée : elle saisit ses
+--    heures et pose ses congés comme les autres. Sans fiche, elle n'aurait
+--    aucun moyen de gérer les siens.
 insert into public.collaborateurs (id, prenom, nom, famille_id, date_sortie) values
   ('dddd0001-0000-4000-8000-000000000001','Camille','Dubois','11111111-1111-1111-1111-111111111101', null),
   ('dddd0001-0000-4000-8000-000000000002','Camille','Dubois','11111111-1111-1111-1111-111111111102', null),
   ('dddd0001-0000-4000-8000-000000000003','Théo','Lambert','11111111-1111-1111-1111-111111111101', null),
-  ('dddd0001-0000-4000-8000-000000000004','Marie','Sorel','11111111-1111-1111-1111-111111111102','2026-06-30');
+  ('dddd0001-0000-4000-8000-000000000004','Marie','Sorel','11111111-1111-1111-1111-111111111102','2026-06-30'),
+  ('dddd0001-0000-4000-8000-000000000005','Sophie','Marchais','11111111-1111-1111-1111-111111111102', null);
 
 -- Contrats. Camille : deux mi-temps (17,5 h chacun) — seuils d'heures sup
 -- indépendants. Théo : saisonnier en jours ouvrables (30 j de CP).
@@ -55,7 +65,8 @@ insert into public.contrats (collaborateur_id, modele_id, unite, base, seuil_heb
   ('dddd0001-0000-4000-8000-000000000001','22222222-2222-2222-2222-222222222201','heures',17.5,17.5,'ouvres','{"conge_paye":25,"rtt":5}','2021-09-01'),
   ('dddd0001-0000-4000-8000-000000000002','22222222-2222-2222-2222-222222222203','heures',17.5,17.5,'ouvres','{"conge_paye":25}','2023-03-01'),
   ('dddd0001-0000-4000-8000-000000000003','22222222-2222-2222-2222-222222222202','heures',39,39,'ouvrables','{"conge_paye":30}','2026-07-01'),
-  ('dddd0001-0000-4000-8000-000000000004','22222222-2222-2222-2222-222222222203','heures',35,35,'ouvres','{"conge_paye":25}','2019-04-15');
+  ('dddd0001-0000-4000-8000-000000000004','22222222-2222-2222-2222-222222222203','heures',35,35,'ouvres','{"conge_paye":25}','2019-04-15'),
+  ('dddd0001-0000-4000-8000-000000000005','22222222-2222-2222-2222-222222222203','heures',35,35,'ouvres','{"conge_paye":25,"rtt":8}','2015-02-01');
 
 -- ------------------------------------------- Compte de connexion de Camille --
 -- Un SEUL compte pour ses deux contrats (c'est tout l'intérêt du cumul).
@@ -64,8 +75,10 @@ insert into public.contrats (collaborateur_id, modele_id, unite, base, seuil_heb
 --
 -- Le mot de passe n'est PAS codé en dur : la valeur par défaut est publique (le
 -- dépôt est ouvert), et une installation réelle en choisit une autre. Pour
--- l'aligner sur celle des autres comptes de démonstration :
---   psql -v demo_password="'…'" -f supabase/demo-data.sql
+-- l'aligner sur celle des autres comptes de démonstration, passer le réglage
+-- à la CONNEXION (et non par `psql -v`, qui ne fait qu'une substitution côté
+-- client, invisible depuis `current_setting`) :
+--   PGOPTIONS="-c rh.demo_password=…" psql -U postgres -d postgres -f demo-data.sql
 do $$
 declare
   v_sophie uuid;
@@ -79,10 +92,20 @@ begin
       'camille', v_mdp, 'employe',
       'dddd0001-0000-4000-8000-000000000001', 'Camille Dubois');
   end if;
-  -- Rattache le SECOND contrat au même compte.
+  -- Rattachements RÉTABLIS sans condition : le nettoyage en tête de script les a
+  -- détachés, et le compte n'est pas recréé lors d'un rejeu.
   update public.profiles
-     set collaborateurs_secondaires = array['dddd0001-0000-4000-8000-000000000002']::uuid[]
+     set collaborateur_id = 'dddd0001-0000-4000-8000-000000000001',
+         collaborateurs_secondaires = array['dddd0001-0000-4000-8000-000000000002']::uuid[]
    where identifiant = 'camille@demo.local';
+
+  -- La responsable est elle aussi salariée : on rattache son compte à sa fiche,
+  -- sans quoi « Mes heures » et « Mes congés » n'apparaîtraient pas dans son
+  -- menu et elle ne pourrait pas gérer ses propres congés.
+  update public.profiles
+     set collaborateur_id = 'dddd0001-0000-4000-8000-000000000005'
+   where identifiant = 'sophie@demo.local'
+     and collaborateur_id is null;
 end $$;
 
 -- -------------------------------------------------------------- Jours fériés -
