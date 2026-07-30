@@ -15,6 +15,8 @@ import {
 } from '../../../lib/parametrage'
 import type { ParametrageBundle, ParametrageResume } from '../../../lib/parametrage'
 
+const MOT_CONFIRMATION = 'EFFACER'
+
 // Administration → Paramétrage. Exporte la CONFIGURATION dans un fichier JSON
 // et permet de la rejouer sur un autre serveur (ou après réinstallation).
 // L'import est volontairement ADDITIF (ajout/mise à jour) : il ne supprime
@@ -38,10 +40,29 @@ export default function Parametrage() {
   const confirm = useConfirm()
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const purgerDonnees = useDataStore((s) => s.purgerDonnees)
+
   const [bundle, setBundle] = useState<ParametrageBundle | null>(null)
   const [resume, setResume] = useState<ParametrageResume | null>(null)
   const [fileName, setFileName] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
+  // Remise à zéro : mot de confirmation à saisir (un simple clic « Confirmer »
+  // s'accepte machinalement, alors que l'opération est irréversible).
+  const [confirmation, setConfirmation] = useState('')
+
+  async function handlePurge() {
+    const ok = await confirm({
+      title: 'Effacer toutes les données ?',
+      message:
+        'Les heures, congés, soldes, exports, collaborateurs et comptes (sauf le vôtre) seront définitivement supprimés. Le paramétrage est conservé. Cette action est IRRÉVERSIBLE.',
+      confirmLabel: 'Effacer définitivement',
+      danger: true,
+    })
+    if (!ok) return
+    purgerDonnees()
+    setConfirmation('')
+    toast.success('Données effacées. Le paramétrage a été conservé.')
+  }
 
   // ------------------------------- Export -----------------------------------
   function handleExport() {
@@ -146,6 +167,51 @@ export default function Parametrage() {
         <div className="btn-row">
           <button className="btn" onClick={handleExport}>
             Exporter le paramétrage (JSON)
+          </button>
+        </div>
+      </div>
+
+      {/* ---------------- Remise à zéro (opération irréversible) --------------- */}
+      <div className="card" style={{ marginTop: '1rem', borderColor: 'var(--danger)' }}>
+        <h3 className="section-title" style={{ marginTop: 0 }}>
+          Remise à zéro des données
+        </h3>
+        <p className="muted">
+          Efface <strong>toutes les données saisies</strong> — heures, congés,
+          soldes, exports, journal — ainsi que les{' '}
+          <strong>fiches collaborateurs</strong> et{' '}
+          <strong>tous les comptes de connexion sauf le vôtre</strong>.
+        </p>
+        <p className="muted">
+          Le <strong>paramétrage est conservé</strong> : équipes, modèles de
+          contrat, types d'absence, politique de congés, règles générales et jours
+          fériés. Sert à repartir d'une base propre après une phase de test ou de
+          démonstration.
+        </p>
+        <div className="alert error">
+          <strong>Cette opération est irréversible.</strong> Pensez à exporter
+          votre paramétrage ci-dessus avant, et à faire une sauvegarde si des
+          données doivent être conservées.
+        </div>
+        <div className="form-row">
+          <label htmlFor="confirmation">
+            Pour confirmer, tapez <strong>{MOT_CONFIRMATION}</strong>
+          </label>
+          <input
+            id="confirmation"
+            value={confirmation}
+            placeholder={MOT_CONFIRMATION}
+            autoComplete="off"
+            onChange={(e) => setConfirmation(e.target.value)}
+          />
+        </div>
+        <div className="btn-row">
+          <button
+            className="btn danger"
+            disabled={confirmation.trim().toUpperCase() !== MOT_CONFIRMATION}
+            onClick={handlePurge}
+          >
+            Effacer les données
           </button>
         </div>
       </div>

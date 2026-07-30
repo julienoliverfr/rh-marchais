@@ -190,6 +190,7 @@ const GUIDE_ADMIN: GuideEntry[] = [
       'Exportez toute la configuration dans un fichier : équipes, modèles, types d’absence, politiques, fériés, règles.',
       'Rejouez ce fichier sur un nouveau serveur pour retrouver vos réglages sans rien ressaisir.',
       'L’import ajoute ou met à jour, mais ne supprime jamais : un aperçu s’affiche avant enregistrement.',
+      '« Remise à zéro » repart d’une base propre après une phase de test : elle efface heures, congés, soldes, exports, collaborateurs et tous les comptes sauf le vôtre, en conservant le paramétrage. Irréversible — exportez le paramétrage avant.',
     ],
   },
 ]

@@ -412,6 +412,26 @@ export class LocalStorageRepository implements Repository {
 
   // Mode démo : le mot de passe vit en clair dans localStorage (voir authStore).
   // On met simplement à jour la ligne concernée ; aucune action si introuvable.
+  // Remise à zéro : on vide les données SAISIES et les collaborateurs, on garde
+  // le PARAMÉTRAGE (équipes, modèles, types, politiques, règles, fériés) et
+  // UNIQUEMENT le compte responsable passé en session (voir le store).
+  purgerDonnees(): void {
+    write(KEYS.saisies, [])
+    write(KEYS.conges, [])
+    write(KEYS.soldes, [])
+    write(KEYS.exports, [])
+    write(KEYS.audit, [])
+    write(KEYS.collaborateurs, [])
+    // On conserve le premier compte responsable pour ne pas perdre l'accès.
+    const responsable = this.getComptes().find((c) => c.role === 'responsable')
+    write(
+      KEYS.comptes,
+      responsable
+        ? [{ ...responsable, collaborateurId: undefined, collaborateursSecondaires: undefined }]
+        : [],
+    )
+  }
+
   resetPassword(userId: string, nouveauMotDePasse: string): void {
     const list = this.getComptes()
     const idx = list.findIndex((c) => c.id === userId)

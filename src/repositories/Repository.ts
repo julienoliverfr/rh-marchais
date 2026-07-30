@@ -87,6 +87,12 @@ export interface Repository {
   // simplement à jour le mot de passe stocké.
   resetPassword(userId: string, nouveauMotDePasse: string): void
 
+  // REMISE À ZÉRO : efface toutes les données saisies (heures, congés, soldes,
+  // exports, journal) ainsi que les collaborateurs et TOUS les comptes sauf
+  // celui qui lance l'opération. Le PARAMÉTRAGE est conservé.
+  // Opération IRRÉVERSIBLE, réservée au responsable.
+  purgerDonnees(): void
+
   // Règles générales (singleton paramétrable)
   // SUPABASE SWAP POINT
   // Deviendra une table `regles_generales` à une seule ligne (ou une config).

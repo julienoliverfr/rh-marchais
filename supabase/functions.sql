@@ -170,3 +170,80 @@ $$;
 grant execute on function public.admin_create_login(text, text, text, uuid, text) to authenticated;
 grant execute on function public.admin_delete_login(uuid) to authenticated;
 grant execute on function public.admin_reset_password(uuid, text) to authenticated;
+
+-- ------------------------------------------------------ admin_purger_donnees
+-- REMISE À ZÉRO : efface toutes les données SAISIES en conservant le
+-- PARAMÉTRAGE (équipes, modèles de contrat, types d'absence, politiques de
+-- congés, règles générales, jours fériés). Sert à repartir d'une base propre
+-- après une phase de test ou de démonstration, avant les vraies données.
+--
+-- Ce qui est EFFACÉ : journal d'audit · exports · soldes · congés · saisies ·
+-- délégations · contrats · collaborateurs · TOUS les comptes de connexion.
+-- Ce qui est CONSERVÉ : tout le paramétrage, et UNIQUEMENT le compte qui lance
+-- l'opération — sinon l'administrateur se couperait l'accès à sa propre
+-- application (et la base n'aurait plus aucun responsable).
+--
+-- Opération IRRÉVERSIBLE. Réservée au responsable (garde interne). Elle laisse
+-- une trace unique dans le journal, écrite après l'effacement.
+create or replace function public.admin_purger_donnees()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth, extensions
+as $$
+declare
+  v_moi     uuid;
+  v_compte  jsonb;
+begin
+  if not public.is_responsable() then
+    raise exception 'Action réservée au responsable.' using errcode = '42501';
+  end if;
+  v_moi := auth.uid();
+
+  -- Décompte AVANT effacement (retourné à l'appelant pour un message précis).
+  select jsonb_build_object(
+           'saisies',        (select count(*) from public.saisies),
+           'conges',         (select count(*) from public.conges),
+           'collaborateurs', (select count(*) from public.collaborateurs),
+           'comptes',        (select count(*) from public.profiles where id <> v_moi),
+           'exports',        (select count(*) from public.exports)
+         ) into v_compte;
+
+  -- Autorise la suppression du journal (immuable en fonctionnement normal).
+  perform set_config('rh.purge', 'on', true);
+
+  delete from public.audit_log;
+  delete from public.exports;
+  delete from public.soldes;
+  delete from public.conges;
+  delete from public.saisies;
+  delete from public.delegations_saisie;
+  delete from public.contrats;
+
+  -- TOUS les comptes sauf celui qui lance l'opération : on supprime
+  -- l'utilisateur d'authentification, le profil part en cascade
+  -- (profiles.id -> auth.users on delete cascade). Le compte conservé garantit
+  -- qu'il reste un administrateur pour reconstruire l'équipe.
+  delete from auth.identities where user_id in (
+    select id from public.profiles where id <> v_moi);
+  delete from auth.users where id in (
+    select id from public.profiles where id <> v_moi);
+  delete from public.profiles where id <> v_moi;  -- filet de sécurité
+
+  -- Les collaborateurs en dernier : les profils responsables qui y étaient
+  -- rattachés sont détachés automatiquement (FK on delete set null).
+  delete from public.collaborateurs;
+  update public.profiles set collaborateurs_secondaires = null;
+
+  -- Trace de l'opération (le journal vient d'être vidé : cette ligne est la
+  -- première du nouveau journal).
+  insert into public.audit_log (cible_type, cible_id, action, par_user_id, detail)
+  select 'systeme', gen_random_uuid(), 'purge',
+         coalesce((select identifiant from public.profiles where id = v_moi), v_moi::text),
+         'Remise à zéro : ' || v_compte::text;
+
+  return v_compte;
+end;
+$$;
+
+grant execute on function public.admin_purger_donnees() to authenticated;

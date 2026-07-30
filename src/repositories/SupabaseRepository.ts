@@ -1025,6 +1025,30 @@ export class SupabaseRepository implements Repository {
       .catch((e: unknown) => this.report('réinitialisation du mot de passe', e))
   }
 
+  purgerDonnees(): void {
+    // Opération PRIVILÉGIÉE déléguée à la fonction SQL SECURITY DEFINER
+    // `admin_purger_donnees` (garde « responsable uniquement » côté base).
+    void Promise.resolve(this.sb.rpc('admin_purger_donnees'))
+      .then(({ error }) => {
+        if (error) {
+          this.report('remise à zéro des données', error)
+          return
+        }
+        // Le cache local ne reflète plus la base : on le vide et on prévient
+        // l'UI, sinon l'écran continuerait d'afficher les données effacées.
+        this.saisies = []
+        this.conges = []
+        this.soldes = []
+        this.exports = []
+        this.audit = []
+        this.collaborateurs = []
+        this.delegations = []
+        this.profiles = this.profiles.filter((c) => c.id === this.session?.compteId)
+        this.notifyChange()
+      })
+      .catch((e: unknown) => this.report('remise à zéro des données', e))
+  }
+
   // --------------------------- Règles générales -----------------------------
   getRegles(): ReglesGenerales {
     return this.regles

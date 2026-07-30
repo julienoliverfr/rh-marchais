@@ -243,7 +243,12 @@ end $$;
 create or replace function public.audit_immuable()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if auth.uid() is not null then
+  -- Exception UNIQUE : la remise à zéro complète (admin_purger_donnees) pose le
+  -- drapeau `rh.purge` le temps de sa transaction. C'est une opération
+  -- explicite, réservée au responsable, qui efface TOUTES les données — le
+  -- journal n'a plus d'objet puisque son contenu disparaît avec elles.
+  if auth.uid() is not null
+     and coalesce(current_setting('rh.purge', true), '') <> 'on' then
     raise exception 'Le journal d''audit est immuable (ni modification ni suppression).'
       using errcode = '42501';
   end if;

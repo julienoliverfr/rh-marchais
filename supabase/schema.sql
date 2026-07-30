@@ -253,11 +253,11 @@ alter table public.saisies
 -- ------------------------------------------------------------------ audit_log
 create table if not exists public.audit_log (
   id uuid primary key default gen_random_uuid(),
-  cible_type text not null check (cible_type in ('saisie', 'conge', 'export')),
+  cible_type text not null check (cible_type in ('saisie', 'conge', 'export', 'systeme')),
   cible_id uuid not null,
   action text not null check (action in (
     'validee', 'refusee', 'debloquee', 'modifiee',
-    'demande_conge', 'conge_validee', 'conge_refusee', 'conge_jours_modifies', 'conge_annulee', 'export'
+    'demande_conge', 'conge_validee', 'conge_refusee', 'conge_jours_modifies', 'conge_annulee', 'export', 'purge'
   )),
   par_user_id text not null,
   horodatage timestamptz not null default now(),

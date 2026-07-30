@@ -183,6 +183,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       'Exportez la configuration (équipes, contrats, congés, fériés, règles) dans un fichier.',
       'Ce fichier permet de retrouver vos réglages sur un nouveau serveur, sans tout ressaisir.',
       'À l’import, un aperçu s’affiche avant enregistrement ; rien n’est jamais supprimé.',
+      '« Remise à zéro » efface toutes les données saisies, les collaborateurs et les comptes sauf le vôtre — le paramétrage est conservé. Exportez-le avant, par sécurité.',
     ],
   },
   '/responsable/admin/import': {
