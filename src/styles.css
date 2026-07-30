@@ -337,6 +337,13 @@ textarea:focus {
     min-height: 44px;
   }
 
+  /* Les boutons à ICÔNE SEULE (flèches de navigation par mois) restaient larges
+     de 36 px : la hauteur ne suffit pas, une cible se vise dans les deux sens.
+     Sans effet sur les boutons à libellé, déjà plus larges. */
+  .btn.small {
+    min-width: 44px;
+  }
+
   /* Bulle d'aide « ? » : on garde sa petite taille visuelle (elle accompagne un
      libellé) mais on ÉTEND sa zone tactile à 44 px via un pseudo-élément — la
      cible devient confortable au doigt sans déformer la mise en page. */
@@ -393,6 +400,10 @@ textarea:focus {
     display: flex;
     align-items: center;
     min-height: 44px;
+    /* Une case seule dans une cellule de tableau (colonne « Alerte absences »)
+       n'a pas de texte pour élargir son libellé : sans largeur minimale, la
+       cible restait à 29 px de large. */
+    min-width: 44px;
   }
 
   /* Fil d'Ariane : 17 px de haut. On étend la zone tactile par un
@@ -404,7 +415,8 @@ textarea:focus {
   .breadcrumb a::after {
     content: '';
     position: absolute;
-    inset: -13px -8px;
+    /* 17 px de texte + 2 × 14 px = 45 px : au-dessus du seuil, pas juste dessous. */
+    inset: -14px -8px;
   }
 }
 
