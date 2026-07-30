@@ -147,7 +147,8 @@ export default function JoursFeries() {
       {joursFeries.length === 0 ? (
         <p className="muted">Aucun jour personnalisé.</p>
       ) : (
-        <table>
+        <div className="table-wrap">
+          <table>
           <thead>
             <tr>
               <th>Date</th>
@@ -181,7 +182,8 @@ export default function JoursFeries() {
                 </tr>
               ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
 
       <div className="page-head" style={{ marginTop: '1.5rem' }}>
@@ -203,7 +205,8 @@ export default function JoursFeries() {
           </button>
         </div>
       </div>
-      <table>
+      <div className="table-wrap">
+        <table>
         <thead>
           <tr>
             <th>Date</th>
@@ -231,6 +234,7 @@ export default function JoursFeries() {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
