@@ -10,6 +10,11 @@
 -- REJOUABLE : le script efface d'abord ses propres données (préfixe « ddd… »)
 -- puis les recrée. Il ne touche pas aux comptes de démonstration existants.
 --
+-- ⚠️ Il RÉÉCRIT juin et juillet 2026 pour les collaborateurs qu'il alimente
+-- (les 4 d'origine et les siens). Des heures saisies à la main sur ces deux
+-- mois, pour ces personnes-là, seront perdues. Les autres collaborateurs, et
+-- toute autre période, ne sont pas touchés.
+--
 --   docker compose exec -T db psql -U postgres -d postgres < demo-data.sql
 -- ============================================================================
 
@@ -36,8 +41,28 @@ delete from public.collaborateurs where id::text like 'dddd%';
 -- 2) Heures et congés PRÉEXISTANTS sur la période de démonstration : ils
 --    entreraient en conflit avec les données générées (une seule saisie par
 --    collaborateur et par jour) et donneraient un résultat incohérent.
-delete from public.saisies where date between '2026-06-01' and '2026-07-31';
-delete from public.conges  where date_fin >= '2026-06-01';
+--
+--    La suppression est LIMITÉE aux collaborateurs que ce script alimente. Elle
+--    portait auparavant sur toute la période, tous collaborateurs confondus :
+--    recharger la démo effaçait alors silencieusement les saisies et congés
+--    créés à la main pour tester — y compris ceux d'un collaborateur ajouté
+--    après coup, que la démo ne touche pourtant jamais.
+create temporary table _demo_collabs (id uuid primary key) on commit drop;
+insert into _demo_collabs
+  select id from public.collaborateurs where id::text like 'dddd%'
+  union
+  select unnest(array[
+    '33333333-3333-3333-3333-333333333301',
+    '33333333-3333-3333-3333-333333333302',
+    '33333333-3333-3333-3333-333333333303',
+    '33333333-3333-3333-3333-333333333304']::uuid[]);
+
+delete from public.saisies
+ where date between '2026-06-01' and '2026-07-31'
+   and collaborateur_id in (select id from _demo_collabs);
+delete from public.conges
+ where date_fin >= '2026-06-01'
+   and collaborateur_id in (select id from _demo_collabs);
 
 -- ------------------------------------------------- Équipes : réglages démo ---
 -- L'équipe Vignes exige une description de la journée : cela montre le champ
