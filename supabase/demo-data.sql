@@ -61,15 +61,22 @@ insert into public.contrats (collaborateur_id, modele_id, unite, base, seuil_heb
 -- Un SEUL compte pour ses deux contrats (c'est tout l'intérêt du cumul).
 -- `admin_create_login` exige un responsable : on emprunte l'identité de Sophie
 -- le temps de l'appel (uniquement dans cette transaction).
+--
+-- Le mot de passe n'est PAS codé en dur : la valeur par défaut est publique (le
+-- dépôt est ouvert), et une installation réelle en choisit une autre. Pour
+-- l'aligner sur celle des autres comptes de démonstration :
+--   psql -v demo_password="'…'" -f supabase/demo-data.sql
 do $$
-declare v_sophie uuid;
+declare
+  v_sophie uuid;
+  v_mdp    text := coalesce(current_setting('rh.demo_password', true), 'demo1234');
 begin
   select id into v_sophie from public.profiles where identifiant = 'sophie@demo.local';
   if v_sophie is null then return; end if;
   perform set_config('request.jwt.claims', json_build_object('sub', v_sophie)::text, true);
   if not exists (select 1 from public.profiles where identifiant = 'camille@demo.local') then
     perform public.admin_create_login(
-      'camille', 'demo1234', 'employe',
+      'camille', v_mdp, 'employe',
       'dddd0001-0000-4000-8000-000000000001', 'Camille Dubois');
   end if;
   -- Rattache le SECOND contrat au même compte.
