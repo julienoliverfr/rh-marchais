@@ -94,6 +94,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       'Une ligne par collaborateur, une colonne par jour : qui est là, qui est en congé.',
       'Un « ⚠ » signale une journée sans heures ni congé — le plus souvent un oubli de saisie, pas forcément une absence.',
       'Les week-ends et fériés sont grisés, sauf si des heures ont été saisies ce jour-là.',
+      'Pour suivre quelques personnes seulement, tapez leur nom dans « Collaborateurs » : chacune s’ajoute comme une étiquette, que vous retirez d’un clic sur la croix. Laissez vide pour voir tout le monde.',
       'Pour le détail des heures d’une personne, ouvrez la feuille mensuelle.',
     ],
   },
