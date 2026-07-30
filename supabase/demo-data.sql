@@ -215,6 +215,26 @@ where extract(isodow from d) between 1 and 5
   and not (c.id = '33333333-3333-3333-3333-333333333302'::uuid
            and d between '2026-07-13' and '2026-07-24');
 
+-- Bloc 3 bis : SOPHIE, la responsable — elle est salariée comme les autres et
+-- saisit ses heures. Sans ce bloc, sa ligne dans la vue des présences était un
+-- mur d'alertes « à expliquer », ce qui donnait l'impression d'un écran cassé
+-- alors que c'était simplement une personne sans données.
+-- Ses saisies sont VALIDÉES d'emblée : une saisie faite par un responsable
+-- l'est automatiquement (il est lui-même le valideur).
+insert into public.saisies (id, collaborateur_id, date, periode, matin_debut, matin_fin,
+                            aprem_debut, aprem_fin, total_minutes, statut, saisi_par,
+                            validee_par, validee_le)
+select
+  ('dddd9000-0000-4000-8000-' || lpad((row_number() over ())::text, 12, '0'))::uuid,
+  'dddd0001-0000-4000-8000-000000000005'::uuid, d::date, 'journee',
+  '08:30', '12:00', '13:30', '17:00', 420,
+  case when d < '2026-07-01' then 'verrouillee' else 'validee' end,
+  'sophie@demo.local', 'sophie@demo.local', d::timestamptz + interval '19 hours'
+from generate_series('2026-06-01'::date, '2026-07-28'::date, '1 day') d
+where extract(isodow from d) between 1 and 5
+  and not exists (select 1 from public.jours_feries jf where jf.date = d and jf.chome)
+  and d not in ('2026-06-01','2026-07-14');
+
 -- Bloc 4 : CAMILLE — deux mi-temps, souvent LE MÊME JOUR (matin sur un contrat,
 -- après-midi sur l'autre). C'est la démonstration du cumul de contrats.
 insert into public.saisies (id, collaborateur_id, date, heure_debut, heure_fin, pause_min,

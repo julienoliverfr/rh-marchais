@@ -58,7 +58,10 @@ function sousContrat(c: Collaborateur, date: string): boolean {
 //      l'inverse aurait effacé du travail réellement effectué ;
 //   3. congé validé ;
 //   4. week-end / férié chômé ;
-//   5. jour à venir — personne n'a encore pu travailler ;
+//   5. aujourd'hui ou plus tard — rien à reprocher : les heures du jour se
+//      saisissent en fin de journée. Marquer le jour même « à expliquer »
+//      afficherait une colonne d'alertes tous les matins, et une alerte qui se
+//      déclenche toujours cesse d'être lue ;
 //   6. sinon : à expliquer.
 //
 // Le dernier état ne dit PAS « absent injustifié ». Un trou est le plus souvent
@@ -95,7 +98,7 @@ export function etatJour(
   const jour = new Date(date + 'T12:00:00').getDay()
   if (jour === 0 || jour === 6) return { type: 'chome', label: 'Week-end' }
 
-  if (date > ctx.aujourdhui) return { type: 'futur' }
+  if (date >= ctx.aujourdhui) return { type: 'futur' }
 
   return { type: 'aExpliquer' }
 }
