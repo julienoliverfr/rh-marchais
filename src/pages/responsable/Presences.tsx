@@ -144,12 +144,22 @@ export default function Presences() {
 
   // Deux personnes peuvent porter le même nom (cas des deux contrats) : on
   // désambiguïse par l'équipe, sans quoi la grille serait indéchiffrable.
-  const nomAffiche = (nom: string, equipe: string, idx: number): string => {
-    const homonyme = lignes.some(
-      (l, i) => i !== idx && `${l.collab.nom} ${l.collab.prenom}` === nom,
-    )
-    return homonyme && equipe ? `${nom} (${equipe})` : nom
-  }
+  //
+  // L'homonymie est cherchée sur la liste COMPLÈTE, pas sur les lignes
+  // affichées : sinon le libellé changerait au gré du filtre — en n'affichant
+  // qu'un seul des deux contrats de Camille, la ligne perdait son équipe et on
+  // ne savait plus lequel on regardait.
+  const homonymes = useMemo(() => {
+    const n = new Map<string, number>()
+    for (const c of collaborateurs) {
+      const cle = `${c.nom} ${c.prenom}`
+      n.set(cle, (n.get(cle) ?? 0) + 1)
+    }
+    return n
+  }, [collaborateurs])
+
+  const nomAffiche = (nom: string, equipe: string): string =>
+    (homonymes.get(nom) ?? 0) > 1 && equipe ? `${nom} (${equipe})` : nom
 
   const totalATraiter = lignes.reduce((n, l) => n + l.totaux.aExpliquer, 0)
 
@@ -301,10 +311,10 @@ export default function Presences() {
                 </tr>
               </thead>
               <tbody>
-                {lignes.map((l, idx) => (
+                {lignes.map((l) => (
                   <tr key={l.collab.id}>
                     <th scope="row" className="pr-nom">
-                      {nomAffiche(`${l.collab.nom} ${l.collab.prenom}`, l.equipe, idx)}
+                      {nomAffiche(`${l.collab.nom} ${l.collab.prenom}`, l.equipe)}
                     </th>
                     {l.etats.map((e, i) => {
                       const r = rendu(e)
