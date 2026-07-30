@@ -32,12 +32,29 @@ post(){ curl -s -o /tmp/smoke_body.txt -w "%{http_code}" -X POST "$API/rest/v1/$
 echo "== Smoke-test RH ($API) =="
 
 # 1) Authentification des 3 comptes de démo
-JEAN=$(login jean@demo.local demo1234)
-AMELIE=$(login amelie@demo.local demo1234)
-SOPHIE=$(login sophie@demo.local demo1234)
+# Mot de passe des comptes de démonstration. Surchargeable : une installation
+# destinée à un usage réel ne garde pas la valeur publique par défaut.
+#   DEMO_PASSWORD='...' bash deploy/smoke-test.sh
+DEMO_PASSWORD="${DEMO_PASSWORD:-demo1234}"
+
+JEAN=$(login jean@demo.local "$DEMO_PASSWORD")
+AMELIE=$(login amelie@demo.local "$DEMO_PASSWORD")
+SOPHIE=$(login sophie@demo.local "$DEMO_PASSWORD")
 [ "${#JEAN}"   -gt 50 ] && ok "login jean"   || ko "login jean"
 [ "${#AMELIE}" -gt 50 ] && ok "login amelie" || ko "login amelie"
 [ "${#SOPHIE}" -gt 50 ] && ok "login sophie" || ko "login sophie"
+
+# Sans jeton, tous les contrôles suivants échouent en 401 — et les tests
+# d'intrusion concluent alors à une FAILLE alors que rien n'a été tenté. Un
+# test qui alerte sur la sécurité parce qu'il n'a pas su se connecter masque
+# les vrais problèmes : on s'arrête ici, en disant pourquoi.
+if [ "${#JEAN}" -le 50 ] || [ "${#AMELIE}" -le 50 ] || [ "${#SOPHIE}" -le 50 ]; then
+  echo
+  echo "ARRÊT : authentification impossible — les contrôles suivants n'auraient aucun sens."
+  echo "Cause la plus fréquente : le mot de passe des comptes de démonstration a été changé."
+  echo "  DEMO_PASSWORD='le-bon-mot-de-passe' bash deploy/smoke-test.sh"
+  exit 1
+fi
 
 # Collaborateurs rattachés (découverts, pas codés en dur)
 JC=$(psql "select collaborateur_id from public.profiles where identifiant='jean@demo.local'")
