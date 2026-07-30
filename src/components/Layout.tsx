@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore'
 import { useDataStore } from '../store/dataStore'
 import ContextualHelp from './ContextualHelp'
 import BottomNav from './BottomNav'
+import AlerteAbsences from './AlerteAbsences'
 
 // Coquille commune : barre de titre + navigation selon le rôle.
 export default function Layout() {
@@ -85,6 +86,7 @@ export default function Layout() {
                 </span>
               )}
             </NavLink>
+            <NavLink to="/responsable/presences">Présences</NavLink>
             <NavLink to="/responsable/feuille">Feuille mensuelle</NavLink>
             <NavLink to="/responsable/exports">Exports</NavLink>
             <NavLink to="/responsable/admin">Administration</NavLink>
@@ -102,6 +104,9 @@ export default function Layout() {
       {/* Largeur adaptée au contexte : colonne étroite pour l'espace employé,
           conteneur large et fluide pour l'espace responsable / admin (data-heavy). */}
       <main className={`content${isResponsable ? ' is-wide' : ''}`}>
+        {/* Au-dessus du contenu, sur TOUS les écrans du responsable : une
+            absence imminente ne doit pas dépendre de la page où il se trouve. */}
+        <AlerteAbsences />
         <Outlet />
       </main>
 

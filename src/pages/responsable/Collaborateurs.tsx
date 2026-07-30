@@ -34,6 +34,7 @@ interface Draft {
   dateDebut: string
   // Date de sortie des effectifs, '' si toujours présent.
   dateSortie: string
+  alerteAbsences: boolean
   // Quotas de congés PAR TYPE (jours/type). Un type absent = défaut politique.
   quotasParType: Partial<Record<CongeType, number>>
   // Liste des collaborateurs pour lesquels cette personne peut saisir.
@@ -98,6 +99,9 @@ export default function Collaborateurs() {
       decompteJours: m?.decompteJours ?? 'ouvres',
       dateDebut: '',
       dateSortie: '',
+      // Suivi ACTIVÉ par défaut : une fiche créée sans y penser reste couverte
+      // par les alertes d'absence.
+      alerteAbsences: true,
       // Pré-rempli depuis le modèle (quotas par type).
       quotasParType: m ? { ...quotasParTypeDe(m) } : {},
       peutSaisirPour: [],
@@ -118,6 +122,7 @@ export default function Collaborateurs() {
       // EFFACERAIT la date d'entrée (et donc le prorata + l'ancienneté).
       dateDebut: c.contrat.dateDebut ?? '',
       dateSortie: c.dateSortie ?? '',
+      alerteAbsences: c.alerteAbsences !== false,
       quotasParType: { ...quotasParTypeDe(c.contrat) },
       peutSaisirPour: c.peutSaisirPour ?? [],
     }
@@ -274,6 +279,28 @@ export default function Collaborateurs() {
           <span className="muted">—</span>
         )
       },
+    },
+    {
+      // Bascule DIRECTE depuis la liste : régler le suivi une fiche à la fois
+      // devient vite pénible dès une vingtaine de collaborateurs, et une
+      // corvée est le meilleur moyen de faire abandonner un réglage.
+      key: 'alerte',
+      label: 'Alerte absences',
+      sortable: true,
+      sortType: 'number',
+      sortAccessor: (c) => (c.alerteAbsences !== false ? 1 : 0),
+      render: (c) => (
+        <label className="pr-filtre" style={{ justifyContent: 'center' }}>
+          <input
+            type="checkbox"
+            checked={c.alerteAbsences !== false}
+            onChange={(e) =>
+              saveCollaborateur({ ...c, alerteAbsences: e.target.checked })
+            }
+            aria-label={`Être alerté des absences de ${c.prenom} ${c.nom}`}
+          />
+        </label>
+      ),
     },
     {
       key: 'actions',
@@ -475,6 +502,23 @@ export default function Collaborateurs() {
               exports) reste <strong>intégralement conservé</strong>.
             </p>
           )}
+          <div className="form-row">
+            <label className="pr-filtre" htmlFor="alerteAbs">
+              <input
+                id="alerteAbs"
+                type="checkbox"
+                checked={draft.alerteAbsences}
+                onChange={(e) =>
+                  setDraft({ ...draft, alerteAbsences: e.target.checked })
+                }
+              />
+              <span>Être alerté de ses absences à venir</span>
+            </label>
+            <span className="muted" style={{ fontSize: '0.8rem' }}>
+              Ses congés apparaîtront dans le bandeau d'alerte du responsable. Le
+              délai se règle dans Administration → Règles générales.
+            </span>
+          </div>
           <p className="muted" style={{ fontSize: '0.8rem', marginTop: '-0.25rem' }}>
             {draft.dateDebut ? (
               <>

@@ -1620,3 +1620,213 @@ a:focus-visible,
   opacity: 0.7;
   cursor: progress;
 }
+
+/* ===========================================================================
+   Présences du mois — grille collaborateurs × jours.
+   ---------------------------------------------------------------------------
+   Contrainte de fond : jusqu'à 31 colonnes. La colonne des noms est FIGÉE et
+   le reste défile horizontalement — sans cela, on perd de vue à qui appartient
+   la ligne dès qu'on fait défiler, ce qui rend le tableau inutilisable.
+   =========================================================================== */
+
+.pr-filtre {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+.pr-filtre select {
+  width: auto;
+}
+
+.pr-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.pr-legende span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pr-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Le conteneur porte le défilement : le tableau lui-même ne doit jamais
+   élargir la page (sinon tout le corps défile de travers sur téléphone). */
+.pr-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.pr-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8rem;
+}
+
+.pr-table th,
+.pr-table td {
+  padding: 0;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Colonne des noms : figée à gauche, opaque pour masquer ce qui défile dessous. */
+.pr-nom {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  text-align: left !important;
+  padding: 0.45rem 0.7rem !important;
+  white-space: nowrap;
+  font-weight: 600;
+  border-right: 1px solid var(--border);
+  min-width: 11rem;
+}
+.pr-table thead .pr-nom {
+  z-index: 3;
+  background: var(--surface-2);
+}
+
+.pr-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  z-index: 1;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 0.3rem 0 !important;
+}
+
+.pr-jour {
+  min-width: 1.85rem;
+  line-height: 1.1;
+}
+.pr-jour-lettre {
+  display: block;
+  font-size: 0.62rem;
+  opacity: 0.75;
+}
+.pr-jour-num {
+  display: block;
+  font-weight: 700;
+}
+.pr-jour-chome {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+/* Repère du jour courant : une bordure, pas un fond — un fond entrerait en
+   concurrence avec les couleurs d'état de la cellule. */
+.pr-jour-auj {
+  box-shadow: inset 2px 0 0 var(--yellow-dark), inset -2px 0 0 var(--yellow-dark);
+}
+
+.pr-cell {
+  height: 1.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-right: 1px solid var(--border);
+}
+
+.pr-present {
+  background: var(--navy-soft);
+  color: var(--navy);
+}
+.pr-chome {
+  background: var(--surface-2);
+}
+.pr-hors {
+  color: var(--border);
+}
+.pr-futur {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    var(--surface-2) 3px,
+    var(--surface-2) 6px
+  );
+}
+/* Le « à expliquer » doit sauter aux yeux : c'est la raison d'être de l'écran. */
+.pr-trou {
+  background: var(--yellow-soft);
+  color: var(--warn-text);
+  box-shadow: inset 0 0 0 2px var(--yellow);
+}
+
+/* Congés : une teinte par type. Le rouge reste réservé à la maladie, pour ne
+   pas banaliser la couleur d'alerte de l'application. */
+.pr-conge {
+  color: #fff;
+}
+.pr-conge-conge_paye { background: #2E8B6F; }
+.pr-conge-rtt        { background: #4C7BB5; }
+.pr-conge-anciennete { background: #7C6BB0; }
+.pr-conge-maladie    { background: var(--red); }
+.pr-conge-sans_solde { background: #8A8F9C; }
+
+.pr-tot {
+  min-width: 2.2rem;
+  font-weight: 700;
+  background: var(--surface-2);
+  border-left: 1px solid var(--border);
+}
+.pr-tot-alerte {
+  color: var(--warn-text);
+  background: var(--yellow-soft);
+}
+
+/* --------------------------------------------------------------------------
+   Bandeau des absences à venir (responsable).
+   -------------------------------------------------------------------------- */
+.alerte-absences {
+  background: var(--navy-soft);
+  border: 1px solid var(--navy);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+}
+.alerte-absences-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+}
+.alerte-absences-liste {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+/* Les demandes NON TRAITÉES sont le vrai risque : elles se détachent du reste
+   par un fond d'avertissement, sans quoi elles se noieraient dans la liste. */
+.alerte-absences-attente {
+  margin-top: 0.7rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--yellow-soft);
+  border: 1px solid var(--yellow);
+  border-radius: 8px;
+  color: var(--warn-text);
+}
+.alerte-absences-attente .btn {
+  margin-top: 0.5rem;
+}

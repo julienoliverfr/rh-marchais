@@ -93,6 +93,7 @@ export const REGLES_DEFAUT: ReglesGenerales = {
   saisieRetroJours: 7,
   seuilHsupDefautHebdo: 35,
   verrouillageApresExport: true,
+  alerteAbsenceJours: 7,
 }
 
 export const collaborateursSeed: Collaborateur[] = [

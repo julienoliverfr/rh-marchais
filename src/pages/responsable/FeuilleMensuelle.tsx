@@ -3,7 +3,13 @@ import type { CongeType } from '../../types'
 import { useDataStore } from '../../store/dataStore'
 import { CONGE_TYPE_LABELS } from '../../lib/conges'
 import { feriesCalcules } from '../../lib/feries'
-import { currentMonthKey, formatDateFrNum, formatMonthFr } from '../../lib/dates'
+import {
+  currentMonthKey,
+  decalerMois,
+  formatDateFrNum,
+  formatMonthFr,
+  joursDuMois,
+} from '../../lib/dates'
 import {
   describeHoraires,
   formatMinutes,
@@ -34,24 +40,6 @@ function isoLundi(date: string): string {
   d.setDate(d.getDate() + (jour === 0 ? -6 : 1 - jour))
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
-
-// Liste des jours (ISO) d'un mois 'AAAA-MM'.
-function joursDuMois(monthKey: string): string[] {
-  const [y, m] = monthKey.split('-').map(Number)
-  const nb = new Date(Date.UTC(y, m, 0)).getUTCDate() // jour 0 du mois suivant
-  const out: string[] = []
-  for (let d = 1; d <= nb; d++) {
-    out.push(`${monthKey}-${String(d).padStart(2, '0')}`)
-  }
-  return out
-}
-
-// Décale un mois 'AAAA-MM' de n mois.
-function decalerMois(monthKey: string, n: number): string {
-  const [y, m] = monthKey.split('-').map(Number)
-  const d = new Date(Date.UTC(y, m - 1 + n, 1))
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
 export default function FeuilleMensuelle() {

@@ -24,7 +24,11 @@ export default function ReglesGeneralesPage() {
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    if (draft.saisieRetroJours < 0 || draft.seuilHsupDefautHebdo < 0) {
+    if (
+      draft.saisieRetroJours < 0 ||
+      draft.seuilHsupDefautHebdo < 0 ||
+      draft.alerteAbsenceJours < 0
+    ) {
       setErrorMsg('Les valeurs numériques ne peuvent pas être négatives.')
       return
     }
@@ -89,6 +93,21 @@ export default function ReglesGeneralesPage() {
             </select>
             <span className="muted" style={{ fontSize: '0.8rem' }}>
               Fige les saisies validées du mois lors de l'export comptable.
+            </span>
+          </div>
+          <div className="form-row">
+            <label htmlFor="alerte">Annoncer les absences (jours à l'avance)</label>
+            <input
+              id="alerte"
+              type="number"
+              min={0}
+              max={90}
+              value={draft.alerteAbsenceJours}
+              onChange={(e) => set('alerteAbsenceJours', Number(e.target.value))}
+            />
+            <span className="muted" style={{ fontSize: '0.8rem' }}>
+              Un bandeau signale les congés commençant dans ce délai. 0 désactive
+              l'alerte. Le suivi se règle collaborateur par collaborateur.
             </span>
           </div>
         </div>

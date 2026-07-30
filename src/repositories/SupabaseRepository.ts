@@ -94,6 +94,9 @@ interface CollaborateurRow {
   nom: string
   famille_id: string
   date_sortie: string | null
+  // Peut manquer tant que la migration n'a pas été appliquée : traité comme
+  // `true` à la lecture (voir Collaborateur.alerteAbsences).
+  alerte_absences?: boolean | null
 }
 
 interface ContratRow {
@@ -194,6 +197,8 @@ interface ReglesRow {
   saisie_retro_jours: number
   seuil_hsup_defaut_hebdo: number
   verrouillage_apres_export: boolean
+  // Peut manquer tant que la migration n'a pas été appliquée.
+  alerte_absence_jours?: number | null
 }
 
 interface AuditRow {
@@ -467,6 +472,11 @@ function reglesFromRow(r: ReglesRow): ReglesGenerales {
     saisieRetroJours: Number(r.saisie_retro_jours),
     seuilHsupDefautHebdo: Number(r.seuil_hsup_defaut_hebdo),
     verrouillageApresExport: r.verrouillage_apres_export,
+    // Colonne absente sur une base antérieure à l'alerte : on retombe sur le
+    // délai par défaut plutôt que sur `NaN`, qui désactiverait l'alerte sans
+    // que personne ne comprenne pourquoi.
+    alerteAbsenceJours:
+      r.alerte_absence_jours == null ? 7 : Number(r.alerte_absence_jours),
   }
 }
 function reglesToRow(r: ReglesGenerales): ReglesRow {
@@ -475,6 +485,7 @@ function reglesToRow(r: ReglesGenerales): ReglesRow {
     saisie_retro_jours: r.saisieRetroJours,
     seuil_hsup_defaut_hebdo: r.seuilHsupDefautHebdo,
     verrouillage_apres_export: r.verrouillageApresExport,
+    alerte_absence_jours: r.alerteAbsenceJours,
   }
 }
 
@@ -621,6 +632,7 @@ export class SupabaseRepository implements Repository {
       nom: r.nom,
       familleId: r.famille_id,
       dateSortie: r.date_sortie ?? undefined,
+      alerteAbsences: r.alerte_absences ?? true,
       peutSaisirPour: ciblesParDelegant.get(r.id) ?? [],
       contrat:
         contratByCollab.get(r.id) ??
@@ -777,6 +789,7 @@ export class SupabaseRepository implements Repository {
         nom: collaborateur.nom,
         famille_id: collaborateur.familleId,
         date_sortie: collaborateur.dateSortie ?? null,
+        alerte_absences: collaborateur.alerteAbsences ?? true,
       },
       'enregistrement collaborateur',
     )

@@ -442,7 +442,11 @@ export class LocalStorageRepository implements Repository {
 
   // Règles générales (repli sur les valeurs par défaut si la clé est absente).
   getRegles(): ReglesGenerales {
-    return read<ReglesGenerales>(KEYS.regles, REGLES_DEFAUT)
+    // FUSION avec les valeurs par défaut : le repli ne joue que si la clé est
+    // ABSENTE. Un réglage enregistré avant l'ajout d'un champ serait sinon
+    // relu tel quel, le nouveau champ valant `undefined` — ici, un délai
+    // d'alerte indéfini aurait silencieusement désactivé les alertes.
+    return { ...REGLES_DEFAUT, ...read<Partial<ReglesGenerales>>(KEYS.regles, {}) }
   }
 
   setRegles(regles: ReglesGenerales): void {

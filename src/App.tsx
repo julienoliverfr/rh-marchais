@@ -25,6 +25,7 @@ import TypesAbsence from './pages/responsable/admin/TypesAbsence'
 import JoursFeries from './pages/responsable/admin/JoursFeries'
 import Parametrage from './pages/responsable/admin/Parametrage'
 import FeuilleMensuelle from './pages/responsable/FeuilleMensuelle'
+import Presences from './pages/responsable/Presences'
 import Utilisateurs from './pages/responsable/admin/Utilisateurs'
 import ImportCollaborateurs from './pages/responsable/admin/ImportCollaborateurs'
 
@@ -195,6 +196,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={['responsable']}>
                 <FeuilleMensuelle />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/responsable/presences"
+            element={
+              <ProtectedRoute roles={['responsable']}>
+                <Presences />
               </ProtectedRoute>
             }
           />

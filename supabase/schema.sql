@@ -72,6 +72,10 @@ create table if not exists public.collaborateurs (
   -- Sortie des effectifs. On ne supprime JAMAIS un collaborateur (l'historique
   -- de paie doit être conservé) : on renseigne sa date de sortie.
   date_sortie date,
+  -- Annoncer ou non les absences à venir de cette personne au responsable.
+  -- Activé par défaut : une fiche créée sans y penser reste couverte par les
+  -- alertes, alors que l'inverse la rendrait silencieusement invisible.
+  alerte_absences boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -229,7 +233,9 @@ create table if not exists public.regles_generales (
   id integer primary key default 1 check (id = 1),
   saisie_retro_jours integer not null default 7,
   seuil_hsup_defaut_hebdo numeric not null default 35,
-  verrouillage_apres_export boolean not null default true
+  verrouillage_apres_export boolean not null default true,
+  -- Combien de jours à l'avance annoncer une absence. 0 = alerte désactivée.
+  alerte_absence_jours integer not null default 7
 );
 
 -- -------------------------------------------------------------------- exports

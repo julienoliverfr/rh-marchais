@@ -88,6 +88,15 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
       'Après export, les saisies sont verrouillées : seul un responsable peut les rouvrir.',
     ],
   },
+  '/responsable/presences': {
+    title: 'Présences du mois',
+    lines: [
+      'Une ligne par collaborateur, une colonne par jour : qui est là, qui est en congé.',
+      'Un « ⚠ » signale une journée sans heures ni congé — le plus souvent un oubli de saisie, pas forcément une absence.',
+      'Les week-ends et fériés sont grisés, sauf si des heures ont été saisies ce jour-là.',
+      'Pour le détail des heures d’une personne, ouvrez la feuille mensuelle.',
+    ],
+  },
   '/responsable/feuille': {
     title: 'Feuille mensuelle',
     lines: [
@@ -126,6 +135,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
     lines: [
       'Créez et modifiez les fiches : équipe, contrat, quotas de congés, délégations.',
       'La délégation autorise une personne à saisir les heures d’une autre.',
+      '« Alerte absences » : cochée, ses congés à venir apparaissent dans le bandeau d’alerte. Activée par défaut, décochez pour ne plus être prévenu.',
       'Une personne ayant DEUX contrats (deux mi-temps) a DEUX fiches ici, une par contrat. On les relie ensuite sur son compte, dans Utilisateurs.',
       '« Importer » permet de créer plusieurs collaborateurs depuis un fichier.',
     ],
@@ -176,6 +186,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
     lines: [
       'Fenêtre de saisie rétroactive (par défaut 7 jours), seuil d’heures sup par défaut.',
       'Le verrouillage après export empêche toute modification des heures envoyées.',
+      '« Annoncer les absences » fixe le délai du bandeau d’alerte (0 pour le désactiver). Le choix des personnes suivies se fait dans leur fiche.',
     ],
   },
   '/responsable/admin/parametrage': {

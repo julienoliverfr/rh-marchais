@@ -97,6 +97,12 @@ export interface Collaborateur {
   // Collaborateurs). MIGRATION : les données historiques sans ce champ sont
   // interprétées comme une liste vide.
   peutSaisirPour?: string[]
+  // Faut-il ANNONCER les absences à venir de cette personne au responsable ?
+  // Activé par défaut : une fiche créée sans y penser reste visible dans les
+  // alertes. L'inverse rendrait un collaborateur silencieusement invisible, et
+  // une absence non anticipée ne se rattrape pas.
+  // MIGRATION : une valeur absente vaut `true`.
+  alerteAbsences?: boolean
   // Date de SORTIE des effectifs (ISO yyyy-mm-dd). Absente = toujours présent.
   // On ne SUPPRIME jamais un collaborateur : son historique (saisies, congés,
   // exports) doit être conservé pour la paie. Une fois sorti, il disparaît des
@@ -288,6 +294,11 @@ export interface ReglesGenerales {
   saisieRetroJours: number // fenêtre de saisie rétroactive (jours), défaut 7
   seuilHsupDefautHebdo: number // seuil h. sup hebdo par défaut (h), défaut 35
   verrouillageApresExport: boolean // proposer le verrouillage à l'export, défaut true
+  // Combien de jours à l'avance annoncer une absence au responsable. L'alerte
+  // couvre TOUT l'intervalle (« commence dans les x prochains jours ») et non le
+  // seul jour J-x : sinon un responsable absent ce jour-là raterait l'alerte
+  // définitivement. 0 = alerte désactivée. Défaut 7.
+  alerteAbsenceJours: number
 }
 
 // ---------- Politique de congés paramétrable (Étape 5, inspiré Odoo) ----------

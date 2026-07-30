@@ -59,8 +59,31 @@ export function isInMonthKey(dateStr: string, monthKey: string): boolean {
 }
 
 // Clé du mois courant au format 'YYYY-MM'.
+// Construite sur les composantes LOCALES : `toISOString` convertit en UTC, et le
+// 1er du mois avant 2 h du matin (heure d'été française) elle renvoyait encore
+// le mois précédent — un écran censé s'ouvrir sur le mois en cours affichait
+// alors le mauvais mois.
 export function currentMonthKey(): string {
-  return new Date().toISOString().slice(0, 7)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+// Liste des jours (ISO) d'un mois 'AAAA-MM', du 1er au dernier.
+export function joursDuMois(monthKey: string): string[] {
+  const [y, m] = monthKey.split('-').map(Number)
+  const nb = new Date(Date.UTC(y, m, 0)).getUTCDate() // jour 0 du mois suivant
+  const out: string[] = []
+  for (let d = 1; d <= nb; d++) {
+    out.push(`${monthKey}-${String(d).padStart(2, '0')}`)
+  }
+  return out
+}
+
+// Décale un mois 'AAAA-MM' de n mois (n négatif = vers le passé).
+export function decalerMois(monthKey: string, n: number): string {
+  const [y, m] = monthKey.split('-').map(Number)
+  const d = new Date(Date.UTC(y, m - 1 + n, 1))
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
 // Libellé lisible d'un mois 'YYYY-MM' (ex: "juillet 2026").
