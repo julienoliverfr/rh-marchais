@@ -1,8 +1,41 @@
-# Sert l'application (fichiers statiques) sur le port 80, avec repli SPA
-# (toute URL inconnue renvoie index.html pour que le routage React fonctionne).
+# ---------------------------------------------------------------------------
+# Deux sites sur la même adresse :
+#   • /rh  → l'application RH (fichiers statiques construits par Vite) ;
+#   • /    → le site vitrine, préparé séparément.
+#
+# La racine appartient au SITE : c'est elle que verra un visiteur et qui portera
+# le futur nom de domaine. L'application vit sous un préfixe.
+# ---------------------------------------------------------------------------
 :80 {
-	root * /srv
 	encode gzip
-	try_files {path} /index.html
-	file_server
+
+	# Sans cette redirection, « /rh » tout court (sans barre finale) ne
+	# correspondrait à aucune règle et renverrait une erreur — or c'est
+	# exactement l'adresse que les gens tapent.
+	redir /rh /rh/
+
+	# `handle_path` RETIRE le préfixe avant de chercher le fichier : /rh/assets/x.js
+	# est servi depuis /srv/assets/x.js. Un simple `handle` ne le retirerait pas,
+	# et toutes les ressources tomberaient à côté.
+	handle_path /rh/* {
+		root * /srv
+		# Repli SPA : toute URL inconnue renvoie index.html, pour que le routage
+		# React fonctionne au rechargement d'une page profonde (/rh/presences).
+		try_files {path} /index.html
+		file_server
+	}
+
+	# ------------------------------------------------------------------ site --
+	# Emplacement du site vitrine, monté sur /srv-site (voir l'option -v de
+	# `docker run` dans deploy/install.sh). Tant qu'aucun fichier n'y est déposé,
+	# on affiche un mot d'attente plutôt qu'une erreur brute.
+	handle {
+		root * /srv-site
+		try_files {path} /index.html
+		file_server
+
+		handle_errors {
+			respond `<!doctype html><html lang="fr"><meta charset="utf-8"><title>ETS Marchais</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#F7F8FB;color:#1B2540;text-align:center}a{color:#17356C}</style><div><h1>ETS Marchais</h1><p>Le site est en cours de préparation.</p><p><a href="/rh/">Accéder à l'application RH</a></p></div>` 200
+		}
+	}
 }

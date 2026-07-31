@@ -34,7 +34,10 @@ export default function App() {
     <ToastProvider>
       <AppErrorBridge />
       <ConfirmProvider>
-        <BrowserRouter>
+        {/* L'application est servie sous `/rh`, la racine étant réservée au site
+            vitrine. `basename` est repris de la `base` de Vite : les deux
+            DOIVENT rester alignés, sinon toutes les routes tombent à côté. */}
+        <BrowserRouter basename={import.meta.env.BASE_URL}>
           <Routes>
         <Route path="/login" element={<Login />} />
         {/* Aide (FAQ) accessible à tous, connecté ou non. */}

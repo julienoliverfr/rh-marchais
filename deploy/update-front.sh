@@ -20,4 +20,11 @@ npm ci >/dev/null 2>&1
 echo "==> Construction de l'application"
 VITE_SUPABASE_URL="http://$IP:8000" VITE_SUPABASE_ANON_KEY="$ANON" npm run build
 
+# Le Caddyfile est monté dans le conteneur, mais Caddy garde en mémoire la
+# configuration lue au démarrage : sans rechargement, une modification du
+# fichier resterait sans effet — et le symptôme (une route qui ne répond pas
+# alors que le fichier est correct) est particulièrement trompeur.
+docker exec rh-front caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 \
+  || echo "  (rechargement de Caddy à vérifier)"
+
 echo "==> OK — l'application est à jour. Recharge la page dans ton navigateur."

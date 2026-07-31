@@ -160,10 +160,17 @@ npm ci
 VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" npm run build
 
 log "[9/9] Mise en ligne de l'application (port 80)"
+# /srv      : l'application RH, servie sous /rh
+# /srv-site : le site vitrine, servi à la racine. Le répertoire est créé même
+#             vide — sans lui, Docker le créerait en tant que root et le montage
+#             échouerait ou serait illisible. Tant qu'il est vide, Caddy affiche
+#             un mot d'attente (voir deploy/Caddyfile).
+mkdir -p /opt/site-marchais
 docker rm -f rh-front >/dev/null 2>&1 || true
 docker run -d --restart always --name rh-front \
   -p 80:80 \
   -v "$APP_DIR/dist":/srv \
+  -v /opt/site-marchais:/srv-site \
   -v "$APP_DIR/deploy/Caddyfile":/etc/caddy/Caddyfile \
   caddy:2 >/dev/null
 
