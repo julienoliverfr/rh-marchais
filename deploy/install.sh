@@ -166,12 +166,20 @@ log "[9/9] Mise en ligne de l'application (port 80)"
 #             échouerait ou serait illisible. Tant qu'il est vide, Caddy affiche
 #             un mot d'attente (voir deploy/Caddyfile).
 mkdir -p /opt/site-marchais
+# La configuration est RECOPIÉE dans un emplacement stable, et c'est cette copie
+# qui est montée. Monter directement le fichier du dépôt semble plus simple mais
+# ne fonctionne pas : Docker attache un fichier unique par son INODE, or
+# `git reset --hard` le remplace (nouvel inode) — le conteneur continue alors de
+# lire l'ancienne version, indéfiniment et sans le moindre message d'erreur.
+# `cp` écrit DANS le fichier existant, l'inode est conservé, la copie est vue.
+mkdir -p /opt/rh-caddy
+cp -f "$APP_DIR/deploy/Caddyfile" /opt/rh-caddy/Caddyfile
 docker rm -f rh-front >/dev/null 2>&1 || true
 docker run -d --restart always --name rh-front \
   -p 80:80 \
   -v "$APP_DIR/dist":/srv \
   -v /opt/site-marchais:/srv-site \
-  -v "$APP_DIR/deploy/Caddyfile":/etc/caddy/Caddyfile \
+  -v /opt/rh-caddy/Caddyfile:/etc/caddy/Caddyfile \
   caddy:2 >/dev/null
 
 log "[+] Mise à jour automatique (vérifie le dépôt toutes les 3 min et reconstruit si besoin)"
