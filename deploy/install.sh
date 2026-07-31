@@ -183,27 +183,48 @@ docker run -d --restart always --name rh-front \
   caddy:2 >/dev/null
 
 log "[+] Mise à jour automatique (vérifie le dépôt toutes les 3 min et reconstruit si besoin)"
+# Le script se contente de DÉTECTER un changement puis d'appeler update-front.sh.
+# Reproduire ici les étapes de construction serait une duplication qui finit
+# toujours par diverger : c'est ce qui s'est produit avec la copie du Caddyfile
+# et son rechargement, présents dans update-front.sh mais absents de la copie —
+# les déploiements automatiques auraient donc ignoré toute évolution du serveur web.
 cat > /opt/rh-update.sh <<'UPD'
 #!/bin/bash
 export PATH=/usr/local/bin:/usr/bin:/bin
 cd /opt/rh-marchais || exit 0
 git fetch -q origin main || exit 0
 [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] && exit 0
-git reset --hard -q origin/main
-ANON=$(grep '^ANON_KEY=' /opt/supabase/.env | cut -d= -f2-)
-IP=$(curl -fsS https://api.ipify.org)
-npm ci >/dev/null 2>&1
-VITE_SUPABASE_URL="http://$IP:8000" VITE_SUPABASE_ANON_KEY="$ANON" npm run build
+bash deploy/update-front.sh
 echo "$(date) — application mise a jour"
 UPD
 chmod +x /opt/rh-update.sh
 
 log "[+] Sauvegarde automatique de la base (chaque nuit, vérifiée, 14 jours)"
 install -m 755 "$APP_DIR/deploy/backup.sh" /opt/rh-backup.sh
-( crontab -l 2>/dev/null | grep -v 'rh-backup.sh' ; \
-  echo "30 2 * * * /opt/rh-backup.sh >> /var/log/rh-backup.log 2>&1" ) | crontab -
-bash /opt/rh-backup.sh || echo "  (première sauvegarde à vérifier manuellement)"
-( crontab -l 2>/dev/null | grep -v 'rh-update.sh' ; echo "*/3 * * * * /opt/rh-update.sh >> /var/log/rh-update.log 2>&1" ) | crontab -
+
+# Les tâches planifiées passent par /etc/cron.d et NON par `crontab -`.
+#
+# La forme précédente — `( crontab -l | grep -v … ; echo … ) | crontab -` —
+# échouait silencieusement sur un serveur NEUF : sans crontab existant,
+# `crontab -l` sort en 1 et `grep -v` sort en 1 faute de ligne retenue ;
+# `pipefail` propage l'échec et `set -e` interrompt l'installation. Ni la
+# sauvegarde ni la mise à jour n'étaient alors programmées, alors que le script
+# avait déjà affiché ses messages de succès.
+#
+# Un fichier déposé ici est déclaratif et rejouable : pas de lecture-modification
+# d'un état existant, donc rien qui puisse échouer selon l'ordre des choses.
+# Le nom NE DOIT PAS contenir de point, sinon cron ignore le fichier.
+cat > /etc/cron.d/rh-marchais <<'CRON'
+# Sauvegarde de la base, chaque nuit à 2 h 30.
+30 2 * * * root /opt/rh-backup.sh >> /var/log/rh-backup.log 2>&1
+# Déploiement automatique : reconstruit si le dépôt a changé.
+*/3 * * * * root /opt/rh-update.sh >> /var/log/rh-update.log 2>&1
+CRON
+chmod 644 /etc/cron.d/rh-marchais
+
+# Première sauvegarde immédiate : une sauvegarde jamais exécutée n'est pas une
+# sauvegarde. `|| true` car un échec ici ne doit pas faire échouer l'installation.
+bash /opt/rh-backup.sh || echo "  ⚠ première sauvegarde EN ÉCHEC — à vérifier"
 
 # Récapitulatif
 cat <<EOF
