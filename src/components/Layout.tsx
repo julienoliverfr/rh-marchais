@@ -4,6 +4,7 @@ import { useDataStore } from '../store/dataStore'
 import ContextualHelp from './ContextualHelp'
 import BottomNav from './BottomNav'
 import AlerteAbsences from './AlerteAbsences'
+import InstallerApp from './InstallerApp'
 
 // Coquille commune : barre de titre + navigation selon le rôle.
 export default function Layout() {
@@ -115,6 +116,9 @@ export default function Layout() {
         {/* Au-dessus du contenu, sur TOUS les écrans du responsable : une
             absence imminente ne doit pas dépendre de la page où il se trouve. */}
         <AlerteAbsences />
+        {/* Ne s'affiche que sur un terminal tactile, et pas si l'application est
+            déjà installée : voir InstallerApp. */}
+        <InstallerApp />
         <Outlet />
       </main>
 
