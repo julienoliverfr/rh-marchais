@@ -19,10 +19,23 @@
 	# et toutes les ressources tomberaient à côté.
 	handle_path /rh/* {
 		root * /srv
-		# Repli SPA : toute URL inconnue renvoie index.html, pour que le routage
-		# React fonctionne au rechargement d'une page profonde (/rh/presences).
-		try_files {path} /index.html
-		file_server
+
+		# Les RESSOURCES sont servies sans repli : sinon un fichier manquant
+		# renverrait index.html avec un code 200, et le navigateur échouerait sur
+		# « du HTML reçu à la place d'un script » — un symptôme qui n'oriente pas
+		# du tout vers la vraie cause (un chemin de déploiement cassé).
+		@ressource path /assets/*
+		handle @ressource {
+			file_server
+		}
+
+		# Repli SPA pour les PAGES : toute URL inconnue renvoie index.html, pour
+		# que le routage React fonctionne au rechargement d'une page profonde
+		# (/rh/presences).
+		handle {
+			try_files {path} /index.html
+			file_server
+		}
 	}
 
 	# ------------------------------------------------------------------ site --
@@ -38,9 +51,18 @@
 	# `handle_errors` se place au niveau du SITE, jamais dans un `handle` : Caddy
 	# refuse de démarrer sinon (« is not an ordered HTTP handler »).
 	handle_errors {
-		# Page d'attente UNIQUEMENT hors application. Répondre 200 pour une
-		# ressource manquante sous /rh masquerait un vrai problème de déploiement.
-		@hors_appli not path /rh/*
+		# Page d'attente UNIQUEMENT pour une NAVIGATION hors application.
+		#
+		# La condition sur `Accept` n'est pas un détail : sans elle, /sw.js
+		# recevait cette page avec un code 200. Or le navigateur d'un visiteur
+		# ayant connu l'application à la racine y cherche encore son service
+		# worker — et ne le désenregistre QUE s'il obtient une vraie erreur. Avec
+		# un 200, l'ancienne version resterait indéfiniment servie par-dessus le
+		# futur site.
+		@hors_appli {
+			not path /rh/*
+			header Accept *text/html*
+		}
 		respond @hors_appli `<!doctype html><html lang="fr"><meta charset="utf-8"><title>ETS Marchais</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#F7F8FB;color:#1B2540;text-align:center}a{color:#17356C}</style><div><h1>ETS Marchais</h1><p>Le site est en cours de préparation.</p><p><a href="/rh/">Accéder à l'application RH</a></p></div>` 200
 		respond "{err.status_code} {err.status_text}" {err.status_code}
 	}
