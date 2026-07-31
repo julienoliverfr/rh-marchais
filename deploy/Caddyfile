@@ -26,16 +26,22 @@
 	}
 
 	# ------------------------------------------------------------------ site --
-	# Emplacement du site vitrine, monté sur /srv-site (voir l'option -v de
-	# `docker run` dans deploy/install.sh). Tant qu'aucun fichier n'y est déposé,
-	# on affiche un mot d'attente plutôt qu'une erreur brute.
+	# Site vitrine, monté sur /srv-site (voir l'option -v de `docker run` dans
+	# deploy/install.sh). Répertoire vide pour l'instant : la page d'attente
+	# ci-dessous prend alors le relais.
 	handle {
 		root * /srv-site
 		try_files {path} /index.html
 		file_server
+	}
 
-		handle_errors {
-			respond `<!doctype html><html lang="fr"><meta charset="utf-8"><title>ETS Marchais</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#F7F8FB;color:#1B2540;text-align:center}a{color:#17356C}</style><div><h1>ETS Marchais</h1><p>Le site est en cours de préparation.</p><p><a href="/rh/">Accéder à l'application RH</a></p></div>` 200
-		}
+	# `handle_errors` se place au niveau du SITE, jamais dans un `handle` : Caddy
+	# refuse de démarrer sinon (« is not an ordered HTTP handler »).
+	handle_errors {
+		# Page d'attente UNIQUEMENT hors application. Répondre 200 pour une
+		# ressource manquante sous /rh masquerait un vrai problème de déploiement.
+		@hors_appli not path /rh/*
+		respond @hors_appli `<!doctype html><html lang="fr"><meta charset="utf-8"><title>ETS Marchais</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#F7F8FB;color:#1B2540;text-align:center}a{color:#17356C}</style><div><h1>ETS Marchais</h1><p>Le site est en cours de préparation.</p><p><a href="/rh/">Accéder à l'application RH</a></p></div>` 200
+		respond "{err.status_code} {err.status_text}" {err.status_code}
 	}
 }
