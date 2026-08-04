@@ -20,15 +20,19 @@ npm ci >/dev/null 2>&1
 echo "==> Construction de l'application"
 VITE_SUPABASE_URL="http://$IP:8000" VITE_SUPABASE_ANON_KEY="$ANON" npm run build
 
-# Configuration du serveur web. DEUX pièges, tous deux silencieux :
-#  1. `cp` et non un montage direct du fichier du dépôt : Docker attache un
-#     fichier unique par son INODE, que `git reset --hard` remplace. `cp` écrit
-#     dans le fichier existant et conserve l'inode, donc le conteneur voit bien
-#     la nouvelle version ;
-#  2. Caddy garde en mémoire la configuration lue au démarrage : sans
-#     rechargement, la modification resterait sans effet.
+# Configuration du serveur web.
+#
+# Le conteneur monte le RÉPERTOIRE /opt/rh-caddy (et non le fichier seul) : voir
+# l'explication du piège d'inode dans install.sh. On peut donc écrire ici sans
+# précaution particulière.
+#
+# ⚠️ Ce fichier contient un `import` du bloc appartenant au SITE VITRINE, dont
+# la configuration vit dans son propre dépôt. Ne jamais y réintroduire leur
+# bloc en dur : il serait écrasé au déploiement suivant, et le site tomberait.
 mkdir -p /opt/rh-caddy
 cp -f deploy/Caddyfile /opt/rh-caddy/Caddyfile
+# Caddy garde en mémoire la configuration lue au démarrage : sans rechargement,
+# la modification resterait sans effet.
 docker exec rh-front caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 \
   || echo "  (rechargement de Caddy à vérifier)"
 

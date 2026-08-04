@@ -171,12 +171,19 @@ log "[9/9] Mise en ligne de l'application (port 80)"
 #             échouerait ou serait illisible. Tant qu'il est vide, Caddy affiche
 #             un mot d'attente (voir deploy/Caddyfile).
 mkdir -p /opt/site-marchais
-# La configuration est RECOPIÉE dans un emplacement stable, et c'est cette copie
-# qui est montée. Monter directement le fichier du dépôt semble plus simple mais
-# ne fonctionne pas : Docker attache un fichier unique par son INODE, or
-# `git reset --hard` le remplace (nouvel inode) — le conteneur continue alors de
-# lire l'ancienne version, indéfiniment et sans le moindre message d'erreur.
-# `cp` écrit DANS le fichier existant, l'inode est conservé, la copie est vue.
+# On monte le RÉPERTOIRE /opt/rh-caddy, jamais le fichier seul.
+#
+# Docker attache un fichier unique par son INODE. Dès que quelqu'un le remplace
+# au lieu de l'écrire en place — `git reset --hard`, un éditeur qui écrit un
+# temporaire puis renomme, un autre script — le conteneur reste accroché à
+# l'ancien inode et lit indéfiniment une version périmée, SANS AUCUNE ERREUR.
+# Le symptôme est déroutant : la configuration sur disque est correcte, elle est
+# validée, elle est rechargée, et elle reste sans effet.
+#
+# Écrire avec `cp` (qui préserve l'inode) suffit tant qu'on est seul à écrire —
+# mais deux sessions travaillent sur ce serveur, et la garantie tombe.
+# Le montage de RÉPERTOIRE supprime le problème à la racine : le conteneur
+# résout le nom à chaque lecture, quel que soit l'inode.
 mkdir -p /opt/rh-caddy
 cp -f "$APP_DIR/deploy/Caddyfile" /opt/rh-caddy/Caddyfile
 docker rm -f rh-front >/dev/null 2>&1 || true
@@ -184,7 +191,7 @@ docker run -d --restart always --name rh-front \
   -p 80:80 \
   -v "$APP_DIR/dist":/srv \
   -v /opt/site-marchais:/srv-site \
-  -v /opt/rh-caddy/Caddyfile:/etc/caddy/Caddyfile \
+  -v /opt/rh-caddy:/etc/caddy \
   caddy:2 >/dev/null
 
 log "[+] Mise à jour automatique (vérifie le dépôt toutes les 3 min et reconstruit si besoin)"
