@@ -132,12 +132,17 @@ log "[6b/9] Réduction de la pile aux services réellement utilisés"
 # et protégée par un simple mot de passe) et libère ~1 Go de mémoire.
 bash "$APP_DIR/deploy/alleger-pile.sh" || echo "  (allègement à vérifier manuellement)"
 
+log "[6c/9] Durcissement de l'authentification (limitation des tentatives)"
+bash "$APP_DIR/deploy/durcir-auth.sh" || echo "  ⚠ durcissement de l'auth À VÉRIFIER"
+
 log "[7/9] Création du schéma, des règles de sécurité, puis des comptes de démo"
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/schema.sql"
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/rls.sql"
 # Fonctions admin SECURITY DEFINER (création/suppression de comptes via RPC).
 # À appliquer APRÈS rls.sql (elles dépendent de public.is_responsable()) et AVANT
 # la création des comptes de démo + le seed.
+# La politique de mot de passe AVANT les fonctions admin : celles-ci l'appellent.
+docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/politique-mot-de-passe.sql"
 docker compose exec -T db psql -U postgres -d postgres < "$APP_DIR/supabase/functions.sql"
 # Durcissement de sécurité (RLS + triggers) : sans lui, un employé pourrait se
 # promouvoir responsable et valider ses propres heures/congés.

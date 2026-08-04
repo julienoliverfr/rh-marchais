@@ -47,6 +47,10 @@ begin
   if p_role is null or p_role not in ('employe', 'responsable') then
     raise exception 'Rôle invalide : %', p_role using errcode = '22023';
   end if;
+  -- Politique de mot de passe (supabase/politique-mot-de-passe.sql). Contrôlée
+  -- ICI parce que cette fonction écrit directement dans auth.users : un réglage
+  -- côté GoTrue ne s'appliquerait pas.
+  perform public.verifier_mot_de_passe(p_mot_de_passe);
 
   -- Cohérence avec l'auth de l'appli (authStore.toEmail).
   v_email := case when position('@' in v_login) > 0 then v_login else v_login || '@demo.local' end;
@@ -153,6 +157,9 @@ begin
   if p_nouveau_mot_de_passe is null or p_nouveau_mot_de_passe = '' then
     raise exception 'Le nouveau mot de passe est obligatoire.' using errcode = '22023';
   end if;
+  -- Même politique qu'à la création : sans cela, une réinitialisation aurait
+  -- suffi à contourner la règle.
+  perform public.verifier_mot_de_passe(p_nouveau_mot_de_passe);
 
   update auth.users
      set encrypted_password = crypt(p_nouveau_mot_de_passe, gen_salt('bf')),
