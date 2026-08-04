@@ -39,22 +39,20 @@
 	}
 
 	# ------------------------------------------------------------------ site --
-	# ⚠️ CE BLOC APPARTIENT AU SITE VITRINE, travaillé dans une autre session.
-	# Il est repris ici parce que `update-front.sh` recopie ce fichier vers
-	# /opt/rh-caddy/Caddyfile à chaque déploiement : toute divergence serait
-	# écrasée au prochain `git push`, et le site tomberait sans prévenir.
-	# Ne pas le modifier sans se coordonner.
+	# La racine appartient au SITE VITRINE, dont la configuration vit dans SON
+	# dépôt. Ce fichier-ci est recopié à chaque déploiement de l'application RH :
+	# tant que leur bloc y figurait, notre prochain `git push` l'écrasait et le
+	# site tombait sans prévenir. Chacun est désormais maître de son bloc.
 	#
-	# Le site n'est pas un dossier de fichiers mais une application Node
-	# (Express + EJS) qui écoute sur le port 3001 de l'HÔTE. Depuis ce
-	# conteneur, l'hôte se joint par la passerelle du réseau bridge.
-	# Si le service est arrêté, `reverse_proxy` échoue et `handle_errors`
-	# ci-dessous réaffiche la page d'attente : jamais de page blanche.
-	handle {
-		reverse_proxy 172.17.0.1:3001 {
-			header_up X-Forwarded-Prefix /
-		}
-	}
+	# Leur fichier est déposé dans /opt/site-marchais, monté sur /srv-site dans
+	# ce conteneur — d'où ce chemin.
+	#
+	# Import par MOTIF et non par nom exact, et ce n'est pas un détail : un
+	# import littéral dont le fichier manque fait REFUSER toute la configuration
+	# à Caddy. Un faux pas dans LEUR déploiement ferait alors tomber NOTRE
+	# application en même temps que leur site. Avec un motif, Caddy passe outre :
+	# la racine retombe sur la page d'attente ci-dessous, l'application continue.
+	import /srv-site/deploy/caddy-*.conf
 
 	# `handle_errors` se place au niveau du SITE, jamais dans un `handle` : Caddy
 	# refuse de démarrer sinon (« is not an ordered HTTP handler »).
