@@ -39,13 +39,21 @@
 	}
 
 	# ------------------------------------------------------------------ site --
-	# Site vitrine, monté sur /srv-site (voir l'option -v de `docker run` dans
-	# deploy/install.sh). Répertoire vide pour l'instant : la page d'attente
-	# ci-dessous prend alors le relais.
+	# ⚠️ CE BLOC APPARTIENT AU SITE VITRINE, travaillé dans une autre session.
+	# Il est repris ici parce que `update-front.sh` recopie ce fichier vers
+	# /opt/rh-caddy/Caddyfile à chaque déploiement : toute divergence serait
+	# écrasée au prochain `git push`, et le site tomberait sans prévenir.
+	# Ne pas le modifier sans se coordonner.
+	#
+	# Le site n'est pas un dossier de fichiers mais une application Node
+	# (Express + EJS) qui écoute sur le port 3001 de l'HÔTE. Depuis ce
+	# conteneur, l'hôte se joint par la passerelle du réseau bridge.
+	# Si le service est arrêté, `reverse_proxy` échoue et `handle_errors`
+	# ci-dessous réaffiche la page d'attente : jamais de page blanche.
 	handle {
-		root * /srv-site
-		try_files {path} /index.html
-		file_server
+		reverse_proxy 172.17.0.1:3001 {
+			header_up X-Forwarded-Prefix /
+		}
 	}
 
 	# `handle_errors` se place au niveau du SITE, jamais dans un `handle` : Caddy
