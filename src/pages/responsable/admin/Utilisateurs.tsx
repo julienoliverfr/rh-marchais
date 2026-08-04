@@ -20,6 +20,14 @@ const ROLE_LABELS: Record<Role, string> = {
   responsable: 'Responsable',
 }
 
+// Longueur minimale du mot de passe. Ce contrôle n'est qu'un CONFORT : la règle
+// qui fait foi vit dans la base (supabase/politique-mot-de-passe.sql), et elle
+// vérifie davantage — mots de passe trop courants, caractère unique répété.
+// Elle est reprise ici pour dire NON tout de suite, avec une phrase lisible,
+// plutôt que de laisser remonter une erreur technique après l'enregistrement.
+const MDP_LONGUEUR_MIN = 10
+const MDP_MESSAGE = `Le mot de passe doit contenir au moins ${MDP_LONGUEUR_MIN} caractères.`
+
 // Brouillon de création OU d'édition.
 // - `id === null` : création (le mot de passe est OBLIGATOIRE et n'existe qu'ici).
 // - `id !== null` : édition d'un compte existant. L'identifiant est en LECTURE
@@ -139,6 +147,12 @@ export default function Utilisateurs() {
       // 1) Mise à jour du profil (chemin « édition » existant de saveCompte).
       saveCompte(compte)
       // 2) Réinitialisation du mot de passe seulement si un nouveau est saisi.
+      //    Même exigence de longueur qu'à la création : sans ce contrôle, une
+      //    réinitialisation aurait suffi à contourner la règle côté écran.
+      if (draft.motDePasse && draft.motDePasse.length < MDP_LONGUEUR_MIN) {
+        setErrors({ motDePasse: MDP_MESSAGE })
+        return
+      }
       if (draft.motDePasse) resetPassword(draft.id, draft.motDePasse)
       setDraft(null)
       setErrors({})
@@ -160,6 +174,8 @@ export default function Utilisateurs() {
     }
     if (!draft.motDePasse) {
       nextErrors.motDePasse = 'Le mot de passe est obligatoire.'
+    } else if (draft.motDePasse.length < MDP_LONGUEUR_MIN) {
+      nextErrors.motDePasse = MDP_MESSAGE
     }
     if (nextErrors.identifiant || nextErrors.motDePasse) {
       setErrors(nextErrors)

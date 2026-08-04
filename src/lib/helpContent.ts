@@ -177,6 +177,7 @@ const HELP_BY_PATH: Record<string, HelpContent> = {
     lines: [
       'Gérez les comptes de connexion : création, rôle, collaborateur rattaché.',
       '« Modifier » permet aussi de réinitialiser un mot de passe oublié.',
+      'Le mot de passe doit faire au moins 10 caractères. Une phrase facile à retenir (« vendangesduclos ») est plus sûre et plus simple à taper qu’un mot compliqué.',
       'Un employé doit être rattaché à un collaborateur pour saisir ses heures.',
       'Un responsable aussi : rattachez-le à sa fiche pour qu’il saisisse ses heures et pose ses congés comme les autres. « Mes heures » et « Mes congés » apparaissent alors dans son menu.',
       'Deux contrats pour la même personne ? Créez DEUX fiches collaborateur, puis cochez la seconde dans « Autres contrats de cette personne » : elle n’aura qu’un seul mot de passe.',
